@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sales_management/view/screen/AddProduct_Screen.dart';
+import 'package:sales_management/view/screen/InventoryScreen.dart';
 
 class MenusScreen extends StatelessWidget {
   const MenusScreen({super.key});
@@ -87,21 +88,34 @@ class MenusScreen extends StatelessWidget {
                 ],
               ),
 
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.inventory_2_outlined,
-                      color: Colors.grey, size: 22),
-                  SizedBox(height: 4),
-                  Text(
-                    "المخزن",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
+            InkWell(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const InventoryScreen(),
+      ),
+    );
+  },
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: const [
+      Icon(
+        Icons.inventory_2_outlined,
+        color: Colors.grey,
+        size: 22,
+      ),
+      SizedBox(height: 4),
+      Text(
+        "المخزن",
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 11,
+        ),
+      ),
+    ],
+  ),
+),
 
               const SizedBox(width: 40),
 

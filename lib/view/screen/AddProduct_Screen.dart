@@ -3,8 +3,17 @@ import 'package:sales_management/database/database_helper.dart';
 import 'package:sales_management/models/product_model.dart';
 import 'package:sales_management/view/screen/BarcodeScanner_Screen.dart';
 
+
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({super.key});
+  
+  
+
+  final ProductModel? product;
+
+  const AddProductScreen({
+    super.key,
+    this.product,
+  });
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -27,6 +36,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
       TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+
+    if (widget.product != null) {
+      productNameController.text = widget.product!.name;
+      barcodeController.text = widget.product!.barcode;
+      buyPriceController.text =
+          widget.product!.buyPrice.toString();
+      sellPriceController.text =
+          widget.product!.sellPrice.toString();
+      quantityController.text =
+          widget.product!.quantity.toString();
+    }
+  }
+
+  @override
   void dispose() {
     productNameController.dispose();
     buyPriceController.dispose();
@@ -44,9 +69,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
         backgroundColor: const Color(0xFF011236),
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          "إضافة منتج",
-          style: TextStyle(
+        title: Text(
+          widget.product == null
+              ? "إضافة منتج"
+              : "تعديل منتج",
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 26,
             fontWeight: FontWeight.bold,
@@ -65,10 +92,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-
               GestureDetector(
                 onTap: () async {
-
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -117,17 +142,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
               const SizedBox(height: 30),
 
-            
-
-              
-
               TextField(
                 controller: barcodeController,
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: "الباركود",
-                  prefixIcon:
-                      const Icon(Icons.qr_code),
+                  prefixIcon: const Icon(Icons.qr_code),
                   border: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(15),
@@ -136,7 +156,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ),
 
               const SizedBox(height: 15),
-                TextField(
+
+              TextField(
                 controller: productNameController,
                 decoration: InputDecoration(
                   labelText: "اسم المنتج",
@@ -153,12 +174,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
               TextField(
                 controller: buyPriceController,
-                keyboardType:
-                    TextInputType.number,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: "سعر الشراء",
-                  prefixIcon:
-                      const Icon(Icons.money),
+                  prefixIcon: const Icon(Icons.money),
                   border: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(15),
@@ -170,8 +189,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
               TextField(
                 controller: sellPriceController,
-                keyboardType:
-                    TextInputType.number,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: "سعر البيع",
                   prefixIcon:
@@ -187,8 +205,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
               TextField(
                 controller: quantityController,
-                keyboardType:
-                    TextInputType.number,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: "الكمية",
                   prefixIcon:
@@ -201,66 +218,97 @@ class _AddProductScreenState extends State<AddProductScreen> {
               ),
 
               const SizedBox(height: 30),
-
-              SizedBox(
+                            SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(0xFF011236),
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(15),
+                    backgroundColor: const Color(0xFF011236),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
                     ),
                   ),
                   onPressed: () async {
 
-  if (productNameController.text.isEmpty ||
-      barcodeController.text.isEmpty ||
-      buyPriceController.text.isEmpty ||
-      sellPriceController.text.isEmpty ||
-      quantityController.text.isEmpty) {
+                    if (productNameController.text.isEmpty ||
+                        barcodeController.text.isEmpty ||
+                        buyPriceController.text.isEmpty ||
+                        sellPriceController.text.isEmpty ||
+                        quantityController.text.isEmpty) {
 
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("يرجى ملء جميع الحقول"),
+                        ),
+                      );
+                      return;
+                    }
+                    // ===== منع تكرار الباركود =====
+  bool exists = await DatabaseHelper.instance.barcodeExists(
+    barcodeController.text.trim(),
+    excludeId: widget.product?.id,
+  );
+
+  if (exists) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("يرجى ملء جميع الحقول"),
+        backgroundColor: Colors.red,
+        content: Text("هذا الباركود مسجل مسبقاً"),
       ),
     );
-
     return;
   }
 
-  final product = ProductModel(
-    name: productNameController.text.trim(),
-    barcode: barcodeController.text.trim(),
-    buyPrice: double.parse(buyPriceController.text),
-    sellPrice: double.parse(sellPriceController.text),
-    quantity: int.parse(quantityController.text),
-    image: "",
-  );
+                    final product = ProductModel(
+                      id: widget.product?.id,
+                      name: productNameController.text.trim(),
+                      barcode: barcodeController.text.trim(),
+                      buyPrice: double.parse(
+                          buyPriceController.text),
+                      sellPrice: double.parse(
+                          sellPriceController.text),
+                      quantity:
+                          int.parse(quantityController.text),
+                      image: "",
+                    );
 
-  await DatabaseHelper.instance.insertProduct(product);
+                    if (widget.product == null) {
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("تم حفظ المنتج بنجاح"),
-      backgroundColor: Colors.green,
-    ),
-  );
+                      await DatabaseHelper.instance
+                          .insertProduct(product);
 
-  productNameController.clear();
-  barcodeController.clear();
-  buyPriceController.clear();
-  sellPriceController.clear();
-  quantityController.clear();
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text("تم حفظ المنتج بنجاح"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
 
-  Navigator.pop(context);
-},
-                  child: const Text(
-                    "حفظ المنتج",
-                    style: TextStyle(
+                    } else {
+
+                      await DatabaseHelper.instance
+                          .updateProduct(product);
+
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(
+                        const SnackBar(
+                          content:
+                              Text("تم تعديل المنتج بنجاح"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+
+                    }
+
+                    Navigator.pop(context, true);
+                  },
+                  child: Text(
+                    widget.product == null
+                        ? "حفظ المنتج"
+                        : "تعديل المنتج",
+                    style: const TextStyle(
                       fontSize: 18,
                       color: Colors.white,
                     ),

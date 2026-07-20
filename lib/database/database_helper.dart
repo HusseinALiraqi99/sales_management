@@ -117,4 +117,25 @@ image TEXT
     final db = await database;
     db.close();
   }
+  Future<bool> barcodeExists(String barcode, {int? excludeId}) async {
+  final db = await database;
+
+  List<Map<String, dynamic>> result;
+
+  if (excludeId == null) {
+    result = await db.query(
+      'products',
+      where: 'barcode = ?',
+      whereArgs: [barcode],
+    );
+  } else {
+    result = await db.query(
+      'products',
+      where: 'barcode = ? AND id != ?',
+      whereArgs: [barcode, excludeId],
+    );
+  }
+
+  return result.isNotEmpty;
+}
 }
