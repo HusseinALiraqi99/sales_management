@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sales_management/database/database_helper.dart';
+import 'package:sales_management/models/product_model.dart';
 import 'package:sales_management/view/screen/BarcodeScanner_Screen.dart';
 
 class AddProductScreen extends StatefulWidget {
@@ -213,7 +215,49 @@ class _AddProductScreenState extends State<AddProductScreen> {
                           BorderRadius.circular(15),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () async {
+
+  if (productNameController.text.isEmpty ||
+      barcodeController.text.isEmpty ||
+      buyPriceController.text.isEmpty ||
+      sellPriceController.text.isEmpty ||
+      quantityController.text.isEmpty) {
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("يرجى ملء جميع الحقول"),
+      ),
+    );
+
+    return;
+  }
+
+  final product = ProductModel(
+    name: productNameController.text.trim(),
+    barcode: barcodeController.text.trim(),
+    buyPrice: double.parse(buyPriceController.text),
+    sellPrice: double.parse(sellPriceController.text),
+    quantity: int.parse(quantityController.text),
+    image: "",
+  );
+
+  await DatabaseHelper.instance.insertProduct(product);
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("تم حفظ المنتج بنجاح"),
+      backgroundColor: Colors.green,
+    ),
+  );
+
+  productNameController.clear();
+  barcodeController.clear();
+  buyPriceController.clear();
+  sellPriceController.clear();
+  quantityController.clear();
+
+  Navigator.pop(context);
+},
                   child: const Text(
                     "حفظ المنتج",
                     style: TextStyle(
