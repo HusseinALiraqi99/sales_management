@@ -1,7 +1,9 @@
 import 'package:path/path.dart';
+import 'package:sales_management/models/invoice_model.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/product_model.dart';
+import '../models/sale_model.dart';
 
 class DatabaseHelper {
   DatabaseHelper._();
@@ -22,26 +24,51 @@ class DatabaseHelper {
 
     final path = join(databasePath, "sales_management.db");
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-    );
+  return await openDatabase(
+  path,
+  version: 2,
+  onCreate: _onCreate,
+  onUpgrade: (db, oldVersion, newVersion) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sales(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        productId INTEGER,
+        productName TEXT,
+        barcode TEXT,
+        price REAL,
+        quantity INTEGER,
+        total REAL,
+        saleDate TEXT
+      )
+    ''');
+  },
+);
   }
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-CREATE TABLE products(
+CREATE TABLE sales(
 id INTEGER PRIMARY KEY AUTOINCREMENT,
-name TEXT NOT NULL,
-barcode TEXT NOT NULL,
-buyPrice REAL NOT NULL,
-sellPrice REAL NOT NULL,
-quantity INTEGER NOT NULL,
-image TEXT
+productId INTEGER,
+productName TEXT,
+barcode TEXT,
+price REAL,
+quantity INTEGER,
+total REAL,
+saleDate TEXT
 )
 ''');
+await db.execute('''
+CREATE TABLE invoices(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+date TEXT NOT NULL,
+total REAL NOT NULL
+)
+''');
+
+
   }
+  
 
   /// إضافة منتج
   Future<int> insertProduct(ProductModel product) async {
@@ -138,4 +165,98 @@ image TEXT
 
   return result.isNotEmpty;
 }
+Future<int> updateProductQuantity(
+  int productId,
+  int newQuantity,
+) async {
+  final db = await database;
+
+  return await db.update(
+    'products',
+    {
+      'quantity': newQuantity,
+    },
+    where: 'id = ?',
+    whereArgs: [productId],
+  );
+}
+Future<ProductModel?> getProductByBarcode(String barcode) async {
+  final db = await database;
+
+  final result = await db.query(
+    'products',
+    where: 'barcode = ?',
+    whereArgs: [barcode],
+  );
+
+  if (result.isEmpty) {
+    return null;
+  }
+
+  return ProductModel.fromMap(result.first);
+}
+Future<ProductModel?> getProductById(int id) async {
+  final db = await database;
+
+  final result = await db.query(
+    'products',
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+
+  if (result.isEmpty) {
+    return null;
+  }
+
+  return ProductModel.fromMap(result.first);
+}
+Future<int> insertSale(SaleModel sale) async {
+  final db = await database;
+
+  return await db.insert(
+    'sales',
+    sale.toMap(),
+  );
+}
+Future<List<SaleModel>> getSales() async {
+  final db = await database;
+
+  final List<Map<String, dynamic>> maps =
+      await db.query(
+    'sales',
+    orderBy: 'id DESC',
+  );
+
+  return List.generate(
+    maps.length,
+    (index) => SaleModel.fromMap(maps[index]),
+  );
+}
+Future<void> deleteAllSales() async {
+  final db = await database;
+
+  await db.delete('sales');
+}
+Future<int> insertInvoice(InvoiceModel invoice) async {
+  final db = await database;
+
+  return await db.insert(
+    'invoices',
+    invoice.toMap(),
+  );
+}
+Future<List<InvoiceModel>> getInvoices() async {
+  final db = await database;
+
+  final maps = await db.query(
+    'invoices',
+    orderBy: 'id DESC',
+  );
+
+  return List.generate(
+    maps.length,
+    (index) => InvoiceModel.fromMap(maps[index]),
+  );
+}
+
 }
