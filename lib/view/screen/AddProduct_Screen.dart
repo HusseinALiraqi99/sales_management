@@ -2,38 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:sales_management/database/database_helper.dart';
 import 'package:sales_management/models/product_model.dart';
 import 'package:sales_management/view/screen/BarcodeScanner_Screen.dart';
-
+import 'package:sales_management/view/screen/SalesScreen.dart';
 
 class AddProductScreen extends StatefulWidget {
-  
-  
-
   final ProductModel? product;
 
-  const AddProductScreen({
-    super.key,
-    this.product,
-  });
+  const AddProductScreen({super.key, this.product});
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
-  final TextEditingController productNameController =
-      TextEditingController();
+  final TextEditingController productNameController = TextEditingController();
 
-  final TextEditingController buyPriceController =
-      TextEditingController();
+  final TextEditingController buyPriceController = TextEditingController();
 
-  final TextEditingController sellPriceController =
-      TextEditingController();
+  final TextEditingController sellPriceController = TextEditingController();
 
-  final TextEditingController quantityController =
-      TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
 
-  final TextEditingController barcodeController =
-      TextEditingController();
+  final TextEditingController barcodeController = TextEditingController();
 
   @override
   void initState() {
@@ -42,12 +31,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
     if (widget.product != null) {
       productNameController.text = widget.product!.name;
       barcodeController.text = widget.product!.barcode;
-      buyPriceController.text =
-          widget.product!.buyPrice.toString();
-      sellPriceController.text =
-          widget.product!.sellPrice.toString();
-      quantityController.text =
-          widget.product!.quantity.toString();
+      buyPriceController.text = widget.product!.buyPrice.toString();
+      sellPriceController.text = widget.product!.sellPrice.toString();
+      quantityController.text = widget.product!.quantity.toString();
     }
   }
 
@@ -70,9 +56,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          widget.product == null
-              ? "إضافة منتج"
-              : "تعديل منتج",
+          widget.product == null ? "إضافة منتج" : "تعديل منتج",
           style: const TextStyle(
             color: Colors.white,
             fontSize: 26,
@@ -94,33 +78,47 @@ class _AddProductScreenState extends State<AddProductScreen> {
             children: [
               GestureDetector(
                 onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const BarcodeScannerScreen(),
-                    ),
-                  );
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const BarcodeScannerScreen(),
+    ),
+  );
 
-                  if (result != null) {
-                    barcodeController.text = result;
-                  }
-                },
+  if (result == null) return;
+
+  final product = await DatabaseHelper.instance
+      .getProductByBarcode(result);
+
+  // إذا كان المنتج موجوداً انتقل للمبيعات
+  if (product != null) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SalesScreen(
+          scannedProduct: product,
+        ),
+      ),
+    );
+    return;
+  }
+
+  // إذا لم يكن موجوداً أكمل إضافة المنتج
+  barcodeController.text = result;
+},
                 child: Container(
                   height: 180,
                   width: 180,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
-                    borderRadius:
-                        BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: const Color(0xFF011236),
                       width: 2,
                     ),
                   ),
                   child: const Column(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.qr_code_scanner,
@@ -149,8 +147,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   labelText: "الباركود",
                   prefixIcon: const Icon(Icons.qr_code),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
@@ -161,11 +158,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 controller: productNameController,
                 decoration: InputDecoration(
                   labelText: "اسم المنتج",
-                  prefixIcon:
-                      const Icon(Icons.inventory_2),
+                  prefixIcon: const Icon(Icons.inventory_2),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
@@ -179,8 +174,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   labelText: "سعر الشراء",
                   prefixIcon: const Icon(Icons.money),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
@@ -192,11 +186,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: "سعر البيع",
-                  prefixIcon:
-                      const Icon(Icons.attach_money),
+                  prefixIcon: const Icon(Icons.attach_money),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
@@ -208,17 +200,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: "الكمية",
-                  prefixIcon:
-                      const Icon(Icons.numbers),
+                  prefixIcon: const Icon(Icons.numbers),
                   border: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
 
               const SizedBox(height: 30),
-                            SizedBox(
+              SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
@@ -229,89 +219,67 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     ),
                   ),
                   onPressed: () async {
-
                     if (productNameController.text.isEmpty ||
                         barcodeController.text.isEmpty ||
                         buyPriceController.text.isEmpty ||
                         sellPriceController.text.isEmpty ||
                         quantityController.text.isEmpty) {
-
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("يرجى ملء جميع الحقول"),
-                        ),
+                        const SnackBar(content: Text("يرجى ملء جميع الحقول")),
                       );
                       return;
                     }
                     // ===== منع تكرار الباركود =====
-  bool exists = await DatabaseHelper.instance.barcodeExists(
-    barcodeController.text.trim(),
-    excludeId: widget.product?.id,
-  );
+                    bool exists = await DatabaseHelper.instance.barcodeExists(
+                      barcodeController.text.trim(),
+                      excludeId: widget.product?.id,
+                    );
 
-  if (exists) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.red,
-        content: Text("هذا الباركود مسجل مسبقاً"),
-      ),
-    );
-    return;
-  }
+                    if (exists) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          backgroundColor: Colors.red,
+                          content: Text("هذا الباركود مسجل مسبقاً"),
+                        ),
+                      );
+                      return;
+                    }
 
                     final product = ProductModel(
                       id: widget.product?.id,
                       name: productNameController.text.trim(),
                       barcode: barcodeController.text.trim(),
-                      buyPrice: double.parse(
-                          buyPriceController.text),
-                      sellPrice: double.parse(
-                          sellPriceController.text),
-                      quantity:
-                          int.parse(quantityController.text),
+                      buyPrice: double.parse(buyPriceController.text),
+                      sellPrice: double.parse(sellPriceController.text),
+                      quantity: int.parse(quantityController.text),
                       image: "",
                     );
 
                     if (widget.product == null) {
+                      await DatabaseHelper.instance.insertProduct(product);
 
-                      await DatabaseHelper.instance
-                          .insertProduct(product);
-
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content:
-                              Text("تم حفظ المنتج بنجاح"),
+                          content: Text("تم حفظ المنتج بنجاح"),
                           backgroundColor: Colors.green,
                         ),
                       );
-
                     } else {
+                      await DatabaseHelper.instance.updateProduct(product);
 
-                      await DatabaseHelper.instance
-                          .updateProduct(product);
-
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content:
-                              Text("تم تعديل المنتج بنجاح"),
+                          content: Text("تم تعديل المنتج بنجاح"),
                           backgroundColor: Colors.green,
                         ),
                       );
-
                     }
 
                     Navigator.pop(context, true);
                   },
                   child: Text(
-                    widget.product == null
-                        ? "حفظ المنتج"
-                        : "تعديل المنتج",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                    ),
+                    widget.product == null ? "حفظ المنتج" : "تعديل المنتج",
+                    style: const TextStyle(fontSize: 18, color: Colors.white),
                   ),
                 ),
               ),

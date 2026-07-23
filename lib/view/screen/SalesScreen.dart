@@ -6,7 +6,9 @@ import 'package:sales_management/models/sale_model.dart';
 import 'package:sales_management/view/screen/menus_screen.dart';
 
 class SalesScreen extends StatefulWidget {
-  const SalesScreen({super.key});
+  final ProductModel? scannedProduct;
+
+  const SalesScreen({super.key, this.scannedProduct});
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
@@ -17,8 +19,7 @@ class _SalesScreenState extends State<SalesScreen> {
   List<ProductModel> filteredProducts = [];
   List<CartItemModel> cart = [];
 
-  final TextEditingController searchController =
-      TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
   bool isLoading = true;
 
@@ -27,7 +28,11 @@ class _SalesScreenState extends State<SalesScreen> {
   @override
   void initState() {
     super.initState();
-    loadProducts();
+    loadProducts().then((_) {
+      if (widget.scannedProduct != null) {
+        addToCart(widget.scannedProduct!);
+      }
+    });
   }
 
   Future<void> loadProducts() async {
@@ -43,9 +48,7 @@ class _SalesScreenState extends State<SalesScreen> {
   void searchProduct(String value) {
     setState(() {
       filteredProducts = products.where((product) {
-        return product.name
-                .toLowerCase()
-                .contains(value.toLowerCase()) ||
+        return product.name.toLowerCase().contains(value.toLowerCase()) ||
             product.barcode.contains(value);
       }).toList();
     });
@@ -60,34 +63,24 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   void addToCart(ProductModel product) {
-    final index =
-        cart.indexWhere((e) => e.product.id == product.id);
+    final index = cart.indexWhere((e) => e.product.id == product.id);
 
     if (index == -1) {
       if (product.quantity <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("المنتج غير متوفر"),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("المنتج غير متوفر")));
         return;
       }
 
-      cart.add(
-        CartItemModel(
-          product: product,
-          quantity: 1,
-        ),
-      );
+      cart.add(CartItemModel(product: product, quantity: 1));
     } else {
       if (cart[index].quantity < product.quantity) {
         cart[index].quantity++;
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("الكمية غير كافية"),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("الكمية غير كافية")));
         return;
       }
     }
@@ -106,66 +99,59 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> completeSale() async {
-  try {
-    if (cart.isEmpty) {
+    try {
+      if (cart.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("لا توجد منتجات في الفاتورة")),
+        );
+        return;
+      }
+
+      for (var item in cart) {
+        final sale = SaleModel(
+          productId: item.product.id!,
+          productName: item.product.name,
+          barcode: item.product.barcode,
+          price: item.product.sellPrice,
+          quantity: item.quantity,
+          total: item.totalPrice,
+          saleDate: DateTime.now().toString(),
+        );
+
+        await DatabaseHelper.instance.insertSale(sale);
+
+        await DatabaseHelper.instance.updateProductQuantity(
+          item.product.id!,
+          item.product.quantity - item.quantity,
+        );
+      }
+
+      cart.clear();
+      totalPrice = 0;
+
+      await loadProducts();
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("لا توجد منتجات في الفاتورة"),
+          backgroundColor: Colors.green,
+          content: Text("تمت عملية البيع بنجاح"),
         ),
       );
-      return;
-    }
 
-    for (var item in cart) {
-      final sale = SaleModel(
-        productId: item.product.id!,
-        productName: item.product.name,
-        barcode: item.product.barcode,
-        price: item.product.sellPrice,
-        quantity: item.quantity,
-        total: item.totalPrice,
-        saleDate: DateTime.now().toString(),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MenusScreen()),
       );
+    } catch (e) {
+      debugPrint("ERROR: $e");
 
-      await DatabaseHelper.instance.insertSale(sale);
-
-      await DatabaseHelper.instance.updateProductQuantity(
-        item.product.id!,
-        item.product.quantity - item.quantity,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(backgroundColor: Colors.red, content: Text("حدث خطأ: $e")),
       );
     }
-
-    cart.clear();
-    totalPrice = 0;
-
-    await loadProducts();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.green,
-        content: Text("تمت عملية البيع بنجاح"),
-      ),
-    );
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MenusScreen(),
-      ),
-    );
-  } catch (e) {
-    debugPrint("ERROR: $e");
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.red,
-        content: Text("حدث خطأ: $e"),
-      ),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +171,7 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
         ),
       ),
-            body: Container(
+      body: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: const BoxDecoration(
@@ -197,7 +183,6 @@ class _SalesScreenState extends State<SalesScreen> {
         ),
         child: Column(
           children: [
-
             TextField(
               controller: searchController,
               onChanged: searchProduct,
@@ -216,10 +201,7 @@ class _SalesScreenState extends State<SalesScreen> {
               alignment: Alignment.centerRight,
               child: Text(
                 "المنتجات",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
 
@@ -228,66 +210,40 @@ class _SalesScreenState extends State<SalesScreen> {
             Expanded(
               flex: 2,
               child: isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
+                  ? const Center(child: CircularProgressIndicator())
                   : ListView.builder(
                       itemCount: filteredProducts.length,
                       itemBuilder: (context, index) {
-
-                        final product =
-                            filteredProducts[index];
+                        final product = filteredProducts[index];
 
                         return Card(
                           elevation: 3,
-                          margin:
-                              const EdgeInsets.only(
-                                  bottom: 10),
-                          shape:
-                              RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(
-                                    15),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
                           ),
                           child: ListTile(
-
-                            leading:
-                                const CircleAvatar(
+                            leading: const CircleAvatar(
                               radius: 25,
-                              backgroundColor:
-                                  Color(0xFF011236),
-                              child: Icon(
-                                Icons.inventory,
-                                color: Colors.white,
-                              ),
+                              backgroundColor: Color(0xFF011236),
+                              child: Icon(Icons.inventory, color: Colors.white),
                             ),
 
                             title: Text(
                               product.name,
-                              style:
-                                  const TextStyle(
-                                fontWeight:
-                                    FontWeight.bold,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
 
                             subtitle: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Text("الباركود : ${product.barcode}"),
 
-                                Text(
-                                  "الباركود : ${product.barcode}",
-                                ),
+                                Text("السعر : ${product.sellPrice}"),
 
-                                Text(
-                                  "السعر : ${product.sellPrice}",
-                                ),
-
-                                Text(
-                                  "المتوفر : ${product.quantity}",
-                                ),
+                                Text("المتوفر : ${product.quantity}"),
                               ],
                             ),
 
@@ -306,7 +262,7 @@ class _SalesScreenState extends State<SalesScreen> {
                       },
                     ),
             ),
-                        const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
             const Divider(),
 
@@ -314,10 +270,7 @@ class _SalesScreenState extends State<SalesScreen> {
               alignment: Alignment.centerRight,
               child: Text(
                 "سلة المبيعات",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
 
@@ -334,13 +287,11 @@ class _SalesScreenState extends State<SalesScreen> {
                   : ListView.builder(
                       itemCount: cart.length,
                       itemBuilder: (context, index) {
-
                         final item = cart[index];
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
                           child: ListTile(
-
                             leading: const Icon(
                               Icons.shopping_cart,
                               color: Color(0xFF011236),
@@ -348,14 +299,11 @@ class _SalesScreenState extends State<SalesScreen> {
 
                             title: Text(item.product.name),
 
-                            subtitle: Text(
-                              "الكمية : ${item.quantity}",
-                            ),
+                            subtitle: Text("الكمية : ${item.quantity}"),
 
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-
                                 Text(
                                   "${item.totalPrice.toStringAsFixed(0)}",
                                   style: const TextStyle(
@@ -384,16 +332,11 @@ class _SalesScreenState extends State<SalesScreen> {
             const Divider(),
 
             Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-
                 const Text(
                   "الإجمالي",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
 
                 Text(
@@ -416,21 +359,16 @@ class _SalesScreenState extends State<SalesScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF011236),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
                 onPressed: () async {
-  await completeSale();
+                  await completeSale();
 
-  
-},
+                },
                 child: const Text(
                   "إتمام البيع",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
             ),
