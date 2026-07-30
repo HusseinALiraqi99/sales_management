@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sales_management/database/database_helper.dart';
 import 'package:sales_management/models/cart_item_model.dart';
+import 'package:sales_management/models/invoice_model.dart';
 import 'package:sales_management/models/product_model.dart';
 import 'package:sales_management/models/sale_model.dart';
 import 'package:sales_management/view/screen/menus_screen.dart';
@@ -9,6 +10,7 @@ class SalesScreen extends StatefulWidget {
   final ProductModel? scannedProduct;
 
   const SalesScreen({super.key, this.scannedProduct});
+  
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
@@ -24,6 +26,14 @@ class _SalesScreenState extends State<SalesScreen> {
   bool isLoading = true;
 
   double totalPrice = 0;
+
+  final TextEditingController customerController =
+    TextEditingController(text: "نقدي");
+
+String paymentType = "نقدي";
+
+final TextEditingController notesController =
+    TextEditingController();
 
   @override
   void initState() {
@@ -106,17 +116,30 @@ class _SalesScreenState extends State<SalesScreen> {
         );
         return;
       }
+      final invoice = InvoiceModel(
+  customerName: customerController.text.trim().isEmpty
+      ? "نقدي"
+      : customerController.text.trim(),
+  date: DateTime.now().toString(),
+  total: totalPrice,
+  paymentType: paymentType,
+  notes: notesController.text.trim(),
+);
+
+final invoiceId =
+    await DatabaseHelper.instance.insertInvoice(invoice);
 
       for (var item in cart) {
-        final sale = SaleModel(
-          productId: item.product.id!,
-          productName: item.product.name,
-          barcode: item.product.barcode,
-          price: item.product.sellPrice,
-          quantity: item.quantity,
-          total: item.totalPrice,
-          saleDate: DateTime.now().toString(),
-        );
+       final sale = SaleModel(
+  invoiceId: invoiceId,
+  productId: item.product.id!,
+  productName: item.product.name,
+  barcode: item.product.barcode,
+  price: item.product.sellPrice,
+  quantity: item.quantity,
+  total: item.totalPrice,
+  saleDate: DateTime.now().toString(),
+);
 
         await DatabaseHelper.instance.insertSale(sale);
 
@@ -128,6 +151,9 @@ class _SalesScreenState extends State<SalesScreen> {
 
       cart.clear();
       totalPrice = 0;
+      customerController.text = "نقدي";
+notesController.clear();
+paymentType = "نقدي";
 
       await loadProducts();
 
@@ -152,6 +178,92 @@ class _SalesScreenState extends State<SalesScreen> {
       );
     }
   }
+  Future<void> showInvoiceDialog() async {
+ if (customerController.text.isEmpty) {
+  customerController.text = "نقدي";
+}
+
+  await showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text("بيانات الفاتورة"),
+        content: StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  TextField(
+                    controller: customerController,
+                    decoration: const InputDecoration(
+                      labelText: "اسم الزبون",
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  DropdownButtonFormField<String>(
+                    value: paymentType,
+                    decoration: const InputDecoration(
+                      labelText: "طريقة الدفع",
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: "نقدي",
+                        child: Text("نقدي"),
+                      ),
+                      DropdownMenuItem(
+                        value: "آجل",
+                        child: Text("آجل"),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        paymentType = value!;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  TextField(
+                    controller: notesController,
+                    decoration: const InputDecoration(
+                      labelText: "ملاحظات",
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        actions: [
+
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text("إلغاء"),
+          ),
+
+          ElevatedButton(
+            onPressed: () async {
+
+              Navigator.pop(context);
+
+              await completeSale();
+
+            },
+            child: const Text("حفظ"),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -302,27 +414,61 @@ class _SalesScreenState extends State<SalesScreen> {
                             subtitle: Text("الكمية : ${item.quantity}"),
 
                             trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "${item.totalPrice.toStringAsFixed(0)}",
-                                  style: const TextStyle(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+  mainAxisSize: MainAxisSize.min,
+  children: [
 
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () {
-                                    removeFromCart(index);
-                                  },
-                                ),
-                              ],
-                            ),
+    IconButton(
+      icon: const Icon(
+        Icons.remove_circle,
+        color: Colors.red,
+      ),
+      onPressed: () {
+        setState(() {
+          if (cart[index].quantity > 1) {
+            cart[index].quantity--;
+          } else {
+            cart.removeAt(index);
+          }
+          calculateTotal();
+        });
+      },
+    ),
+
+    Text(
+      "${cart[index].quantity}",
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 18,
+      ),
+    ),
+
+    IconButton(
+      icon: const Icon(
+        Icons.add_circle,
+        color: Colors.green,
+      ),
+      onPressed: () {
+        if (cart[index].quantity <
+            cart[index].product.quantity) {
+          setState(() {
+            cart[index].quantity++;
+            calculateTotal();
+          });
+        }
+      },
+    ),
+
+    const SizedBox(width: 10),
+
+    Text(
+      "${item.totalPrice.toStringAsFixed(0)}",
+      style: const TextStyle(
+        color: Colors.green,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  ],
+),
                           ),
                         );
                       },
@@ -363,7 +509,7 @@ class _SalesScreenState extends State<SalesScreen> {
                   ),
                 ),
                 onPressed: () async {
-                  await completeSale();
+                  await showInvoiceDialog();
 
                 },
                 child: const Text(

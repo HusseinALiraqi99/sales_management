@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:sales_management/database/database_helper.dart';
-import 'package:sales_management/models/sale_model.dart';
+import 'package:sales_management/models/invoice_model.dart';
 import 'package:sales_management/view/screen/AddProduct_Screen.dart';
 import 'package:sales_management/view/screen/InventoryScreen.dart';
+import 'package:sales_management/view/screen/InvoiceDetails_Screen.dart';
 import 'package:sales_management/view/screen/SalesScreen.dart';
 
 class MenusScreen extends StatelessWidget {
   const MenusScreen({super.key});
-  
 
   @override
   Widget build(BuildContext context) {
@@ -37,48 +37,67 @@ class MenusScreen extends StatelessWidget {
             topRight: Radius.circular(40),
           ),
         ),
-        child: FutureBuilder<List<SaleModel>>(
-  future: DatabaseHelper.instance.getSales(),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
+        child: FutureBuilder<List<InvoiceModel>>(
+          future: DatabaseHelper.instance.getInvoices(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-    final sales = snapshot.data!;
+            final invoices = snapshot.data!;
 
-    if (sales.isEmpty) {
-      return const Center(
-        child: Text(
-          "لا توجد مبيعات",
-          style: TextStyle(fontSize: 20),
+            if (invoices.isEmpty) {
+              return const Center(
+                child: Text("لا توجد فواتير", style: TextStyle(fontSize: 20)),
+              );
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(15),
+              itemCount: invoices.length,
+              itemBuilder: (context, index) {
+                final invoice = invoices[index];
+
+                return Card(
+                  elevation: 3,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFF011236),
+                      child: Icon(Icons.receipt, color: Colors.white),
+                    ),
+                    title: Text(
+                      invoice.customerName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(invoice.date),
+                    trailing: Text(
+                      "${invoice.total} د.ع",
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () {
+                      // سنفتح تفاصيل الفاتورة هنا لاحقًا
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              InvoiceDetailsScreen(invoice: invoice),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            );
+          },
         ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(15),
-      itemCount: sales.length,
-      itemBuilder: (context, index) {
-        final sale = sales[index];
-
-        return Card(
-          child: ListTile(
-            leading: const Icon(Icons.receipt_long),
-            title: Text(sale.productName),
-            subtitle: Text(
-              "الكمية: ${sale.quantity}\n${sale.saleDate}",
-            ),
-            trailing: Text(
-              "${sale.total} د.ع",
-            ),
-          ),
-        );
-      },
-    );
-  },
-),
       ),
 
       extendBody: true,
@@ -88,20 +107,13 @@ class MenusScreen extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AddProductScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const AddProductScreen()),
           );
         },
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-          size: 35,
-        ),
+        child: const Icon(Icons.add, color: Colors.white, size: 35),
       ),
 
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -115,94 +127,72 @@ class MenusScreen extends StatelessWidget {
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.grid_view,
-                      color: Colors.grey, size: 22),
+                  Icon(Icons.grid_view, color: Colors.grey, size: 22),
                   SizedBox(height: 4),
                   Text(
                     "القوائم",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],
               ),
 
-            InkWell(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const InventoryScreen(),
-      ),
-    );
-  },
-  child: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: const [
-      Icon(
-        Icons.inventory_2_outlined,
-        color: Colors.grey,
-        size: 22,
-      ),
-      SizedBox(height: 4),
-      Text(
-        "المخزن",
-        style: TextStyle(
-          color: Colors.grey,
-          fontSize: 11,
-        ),
-      ),
-    ],
-  ),
-),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const InventoryScreen()),
+                  );
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      color: Colors.grey,
+                      size: 22,
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "المخزن",
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
 
               const SizedBox(width: 40),
 
-Column(
-  mainAxisAlignment: MainAxisAlignment.center,
-  children: const [
-                  Icon(Icons.bar_chart,
-                      color: Colors.grey, size: 22),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.bar_chart, color: Colors.grey, size: 22),
                   SizedBox(height: 4),
                   Text(
                     "تقارير",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
                   ),
                 ],
               ),
 
-             InkWell(
-  onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SalesScreen(),
-      ),
-    );
-  },
-  child: Column(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: const [
-      Icon(
-        Icons.receipt_long,
-        color: Colors.grey,
-        size: 22,
-      ),
-      SizedBox(height: 4),
-      Text(
-        "المبيعات",
-        style: TextStyle(
-          color: Colors.grey,
-          fontSize: 11,
-        ),
-      ),
-    ],
-  ),
-),
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SalesScreen()),
+                  );
+                },
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.receipt_long, color: Colors.grey, size: 22),
+                    SizedBox(height: 4),
+                    Text(
+                      "المبيعات",
+                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
