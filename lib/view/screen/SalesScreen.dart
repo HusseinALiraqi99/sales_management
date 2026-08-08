@@ -10,7 +10,6 @@ class SalesScreen extends StatefulWidget {
   final ProductModel? scannedProduct;
 
   const SalesScreen({super.key, this.scannedProduct});
-  
 
   @override
   State<SalesScreen> createState() => _SalesScreenState();
@@ -27,13 +26,13 @@ class _SalesScreenState extends State<SalesScreen> {
 
   double totalPrice = 0;
 
-  final TextEditingController customerController =
-    TextEditingController(text: "نقدي");
+  final TextEditingController customerController = TextEditingController(
+    text: "نقدي",
+  );
 
-String paymentType = "نقدي";
+  String paymentType = "نقدي";
 
-final TextEditingController notesController =
-    TextEditingController();
+  final TextEditingController notesController = TextEditingController();
 
   @override
   void initState() {
@@ -109,106 +108,90 @@ final TextEditingController notesController =
   }
 
   Future<void> completeSale() async {
-    try {
-      if (cart.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("لا توجد منتجات في الفاتورة")),
-        );
-        return;
-      }
-      final invoice = InvoiceModel(
-  customerName: customerController.text.trim().isEmpty
-      ? "نقدي"
-      : customerController.text.trim(),
-  date: DateTime.now().toString(),
-  total: totalPrice,
-  paymentType: paymentType,
-  notes: notesController.text.trim(),
-);
-
-final invoiceId =
-    await DatabaseHelper.instance.insertInvoice(invoice);
-
-      for (var item in cart) {
-       final sale = SaleModel(
-  invoiceId: invoiceId,
-  productId: item.product.id!,
-  productName: item.product.name,
-  barcode: item.product.barcode,
-  price: item.product.sellPrice,
-  quantity: item.quantity,
-  total: item.totalPrice,
-  saleDate: DateTime.now().toString(),
-);
-
-        await DatabaseHelper.instance.insertSale(sale);
-
-        await DatabaseHelper.instance.updateProductQuantity(
-          item.product.id!,
-          item.product.quantity - item.quantity,
-        );
-      }
-
-      cart.clear();
-      totalPrice = 0;
-      customerController.text = "نقدي";
-notesController.clear();
-paymentType = "نقدي";
-
-      await loadProducts();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.green,
-          content: Text("تمت عملية البيع بنجاح"),
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MenusScreen()),
-      );
-    } catch (e) {
-      debugPrint("ERROR: $e");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: Colors.red, content: Text("حدث خطأ: $e")),
-      );
-    }
+  if (cart.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("لا توجد منتجات في السلة"),
+      ),
+    );
+    return;
   }
-  Future<void> showInvoiceDialog() async {
- if (customerController.text.isEmpty) {
-  customerController.text = "نقدي";
-}
 
-  await showDialog(
+  final customerController =
+      TextEditingController(text: "نقدي");
+
+  final notesController =
+      TextEditingController();
+
+  String paymentType = "نقدي";
+
+  final now = DateTime.now();
+
+  final confirmed = await showDialog<bool>(
     context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("بيانات الفاتورة"),
-        content: StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return SingleChildScrollView(
+    builder: (dialogContext) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text(
+              "تأكيد البيع",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
 
+                  // اسم الزبون
                   TextField(
                     controller: customerController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: "اسم الزبون",
+                      prefixIcon:
+                          const Icon(Icons.person),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(12),
+                      ),
                     ),
                   ),
 
                   const SizedBox(height: 15),
 
+                  // التاريخ
+                  InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: "التاريخ",
+                      prefixIcon:
+                          const Icon(Icons.calendar_today),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} "
+                      "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}",
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // طريقة الدفع
                   DropdownButtonFormField<String>(
                     value: paymentType,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: "طريقة الدفع",
+                      prefixIcon:
+                          const Icon(Icons.payment),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(12),
+                      ),
                     ),
                     items: const [
                       DropdownMenuItem(
@@ -216,54 +199,385 @@ paymentType = "نقدي";
                         child: Text("نقدي"),
                       ),
                       DropdownMenuItem(
+                        value: "بطاقة",
+                        child: Text("بطاقة"),
+                      ),
+                      DropdownMenuItem(
                         value: "آجل",
                         child: Text("آجل"),
                       ),
                     ],
                     onChanged: (value) {
-                      setStateDialog(() {
-                        paymentType = value!;
-                      });
+                      if (value != null) {
+                        setDialogState(() {
+                          paymentType = value;
+                        });
+                      }
                     },
                   ),
 
                   const SizedBox(height: 15),
 
+                  // الملاحظات
                   TextField(
                     controller: notesController,
-                    decoration: const InputDecoration(
+                    maxLines: 2,
+                    decoration: InputDecoration(
                       labelText: "ملاحظات",
+                      prefixIcon:
+                          const Icon(Icons.note),
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(12),
+                      ),
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // الإجمالي
+                  Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "الإجمالي:",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "${totalPrice.toStringAsFixed(0)} د.ع",
+                        style: const TextStyle(
+                          fontSize: 20,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            );
-          },
-        ),
-        actions: [
+            ),
 
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("إلغاء"),
-          ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                    dialogContext,
+                    false,
+                  );
+                },
+                child: const Text("إلغاء"),
+              ),
 
-          ElevatedButton(
-            onPressed: () async {
-
-              Navigator.pop(context);
-
-              await completeSale();
-
-            },
-            child: const Text("حفظ"),
-          ),
-        ],
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      const Color(0xFF011236),
+                ),
+                onPressed: () {
+                  Navigator.pop(
+                    dialogContext,
+                    true,
+                  );
+                },
+                child: const Text(
+                  "تأكيد البيع",
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       );
     },
   );
+
+  // إذا ألغى المستخدم
+  if (confirmed != true) {
+    customerController.dispose();
+    notesController.dispose();
+    return;
+  }
+
+  try {
+
+    // =========================
+    // إنشاء الفاتورة
+    // =========================
+
+    final invoice = InvoiceModel(
+      customerName:
+          customerController.text.trim().isEmpty
+              ? "نقدي"
+              : customerController.text.trim(),
+
+      date: now.toString(),
+
+      total: totalPrice,
+
+      paymentType: paymentType,
+
+      notes: notesController.text.trim(),
+    );
+
+    // حفظ الفاتورة والحصول على ID
+    final invoiceId =
+        await DatabaseHelper.instance
+            .insertInvoice(invoice);
+
+    // =========================
+    // حفظ المنتجات
+    // =========================
+
+    for (var item in cart) {
+
+      final sale = SaleModel(
+        invoiceId: invoiceId,
+
+        productId: item.product.id!,
+
+        productName: item.product.name,
+
+        barcode: item.product.barcode,
+
+        price: item.product.sellPrice,
+
+        quantity: item.quantity,
+
+        total: item.totalPrice,
+
+        saleDate: now.toString(),
+      );
+
+      await DatabaseHelper.instance
+          .insertSale(sale);
+
+      // تحديث كمية المخزن
+      final remainingQuantity =
+          item.product.quantity -
+          item.quantity;
+
+      await DatabaseHelper.instance
+          .updateProductQuantity(
+        item.product.id!,
+        remainingQuantity,
+      );
+    }
+
+    // تنظيف السلة
+    cart.clear();
+
+    totalPrice = 0;
+
+    customerController.dispose();
+    notesController.dispose();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Colors.green,
+        content: Text(
+          "تم حفظ الفاتورة وإتمام البيع بنجاح",
+        ),
+      ),
+    );
+
+    // الانتقال إلى القوائم
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MenusScreen(),
+      ),
+    );
+
+  } catch (e) {
+
+    debugPrint("ERROR: $e");
+
+    customerController.dispose();
+    notesController.dispose();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red,
+        content: Text(
+          "حدث خطأ: $e",
+        ),
+      ),
+    );
+  }
 }
+
+  void showCart() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SizedBox(
+              height: MediaQuery.of(context).size.height * 0.75,
+              child: Padding(
+                padding: const EdgeInsets.all(15),
+                child: Column(
+                  children: [
+                    const Text(
+                      "سلة المبيعات",
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    Expanded(
+                      child: cart.isEmpty
+                          ? const Center(
+                              child: Text(
+                                "السلة فارغة",
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: cart.length,
+                              itemBuilder: (context, index) {
+                                final item = cart[index];
+
+                                return Card(
+                                  child: ListTile(
+                                    title: Text(item.product.name),
+
+                                    subtitle: Text(
+                                      "${item.totalPrice.toStringAsFixed(0)} د.ع",
+                                    ),
+
+                                    leading: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.remove_circle,
+                                            color: Colors.red,
+                                          ),
+                                          onPressed: () {
+                                            if (item.quantity > 1) {
+                                              item.quantity--;
+                                            } else {
+                                              cart.removeAt(index);
+                                            }
+
+                                            calculateTotal();
+
+                                            setState(() {});
+                                            setSheetState(() {});
+                                          },
+                                        ),
+
+                                        Text(
+                                          item.quantity.toString(),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.add_circle,
+                                            color: Colors.green,
+                                          ),
+                                          onPressed: () {
+                                            if (item.quantity <
+                                                item.product.quantity) {
+                                              item.quantity++;
+
+                                              calculateTotal();
+
+                                              setState(() {});
+                                              setSheetState(() {});
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+
+                                    trailing: IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () {
+                                        cart.removeAt(index);
+
+                                        calculateTotal();
+
+                                        setState(() {});
+                                        setSheetState(() {});
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+
+                    const Divider(),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "الإجمالي",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        Text(
+                          "${totalPrice.toStringAsFixed(0)} د.ع",
+                          style: const TextStyle(
+                            color: Colors.green,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 55,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await completeSale();
+                        },
+                        child: const Text("إتمام البيع"),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +596,44 @@ paymentType = "نقدي";
             fontSize: 28,
           ),
         ),
+
+        actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.shopping_cart,
+                  color: Colors.white,
+                  size: 30,
+                ),
+                onPressed: () {
+                  showCart();
+                },
+              ),
+
+              if (cart.isNotEmpty)
+                Positioned(
+                  right: 5,
+                  top: 5,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      cart.length.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
@@ -374,150 +726,9 @@ paymentType = "نقدي";
                       },
                     ),
             ),
-            const SizedBox(height: 15),
+       
 
-            const Divider(),
-
-            const Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                "سلة المبيعات",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            Expanded(
-              child: cart.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "لا توجد منتجات في السلة",
-                        style: TextStyle(fontSize: 16),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: cart.length,
-                      itemBuilder: (context, index) {
-                        final item = cart[index];
-
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.shopping_cart,
-                              color: Color(0xFF011236),
-                            ),
-
-                            title: Text(item.product.name),
-
-                            subtitle: Text("الكمية : ${item.quantity}"),
-
-                            trailing: Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-
-    IconButton(
-      icon: const Icon(
-        Icons.remove_circle,
-        color: Colors.red,
-      ),
-      onPressed: () {
-        setState(() {
-          if (cart[index].quantity > 1) {
-            cart[index].quantity--;
-          } else {
-            cart.removeAt(index);
-          }
-          calculateTotal();
-        });
-      },
-    ),
-
-    Text(
-      "${cart[index].quantity}",
-      style: const TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 18,
-      ),
-    ),
-
-    IconButton(
-      icon: const Icon(
-        Icons.add_circle,
-        color: Colors.green,
-      ),
-      onPressed: () {
-        if (cart[index].quantity <
-            cart[index].product.quantity) {
-          setState(() {
-            cart[index].quantity++;
-            calculateTotal();
-          });
-        }
-      },
-    ),
-
-    const SizedBox(width: 10),
-
-    Text(
-      "${item.totalPrice.toStringAsFixed(0)}",
-      style: const TextStyle(
-        color: Colors.green,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  ],
-),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-
-            const Divider(),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "الإجمالي",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-
-                Text(
-                  "${totalPrice.toStringAsFixed(0)} د.ع",
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF011236),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                onPressed: () async {
-                  await showInvoiceDialog();
-
-                },
-                child: const Text(
-                  "إتمام البيع",
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              ),
-            ),
+        
           ],
         ),
       ),
