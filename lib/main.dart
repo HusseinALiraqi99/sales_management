@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:sales_management/view/screen/splash_screen.dart';
+import 'package:sales_management/view/screen/menus_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -10,9 +10,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+
+      // اللغة العربية
+      locale: const Locale('ar'),
+
+      // اتجاه التطبيق من اليمين إلى اليسار
+      builder: (context, child) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: child!,
+        );
+      },
+
+      home: const MenusScreen(),
     );
   }
 }

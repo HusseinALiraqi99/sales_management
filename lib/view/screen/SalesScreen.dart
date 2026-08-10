@@ -561,12 +561,19 @@ class _SalesScreenState extends State<SalesScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 55,
+                      
                       child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF011236),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         onPressed: () async {
                           Navigator.pop(context);
                           await completeSale();
                         },
-                        child: const Text("إتمام البيع"),
+                        child: const Text("إتمام البيع",style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.bold),),
                       ),
                     ),
                   ],
