@@ -192,9 +192,11 @@ class _MenusScreenState extends State<MenusScreen> {
                             // =========================
                             title: Text(
                               invoice.customerName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 17,
+                                color: invoice.paymentType == "آجل"
+                                    ? Colors.blue
+                                    : Colors.black,
                               ),
                             ),
 
@@ -477,10 +479,8 @@ class _MenusScreenState extends State<MenusScreen> {
                 ),
               ),
 
-             
-
               const SizedBox(width: 40),
-               // المخزن
+              // المخزن
               InkWell(
                 onTap: () async {
                   await Navigator.push(
@@ -531,7 +531,6 @@ class _MenusScreenState extends State<MenusScreen> {
                   ],
                 ),
               ),
-              
             ],
           ),
         ),

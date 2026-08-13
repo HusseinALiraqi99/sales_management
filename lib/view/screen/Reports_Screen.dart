@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:sales_management/database/database_helper.dart';
 import 'package:sales_management/models/invoice_model.dart';
+import 'package:sales_management/view/screen/Debt_Screen.dart';
 import 'package:sales_management/view/screen/InvoiceDetails_Screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
   @override
-  State<ReportsScreen> createState() =>
-      _ReportsScreenState();
+  State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
@@ -52,15 +52,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // اليوم
       // ========================================================
 
-      final todayStart = DateTime(
-        now.year,
-        now.month,
-        now.day,
-      );
+      final todayStart = DateTime(now.year, now.month, now.day);
 
-      final tomorrowStart = todayStart.add(
-        const Duration(days: 1),
-      );
+      final tomorrowStart = todayStart.add(const Duration(days: 1));
 
       // ========================================================
       // الأسبوع - يبدأ الاثنين
@@ -70,48 +64,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
         now.year,
         now.month,
         now.day,
-      ).subtract(
-        Duration(days: now.weekday - 1),
-      );
+      ).subtract(Duration(days: now.weekday - 1));
 
-      final nextWeekStart = weekStart.add(
-        const Duration(days: 7),
-      );
+      final nextWeekStart = weekStart.add(const Duration(days: 7));
 
       // ========================================================
       // الشهر
       // ========================================================
 
-      final monthStart = DateTime(
-        now.year,
-        now.month,
-        1,
-      );
+      final monthStart = DateTime(now.year, now.month, 1);
 
-      final nextMonthStart = DateTime(
-        now.year,
-        now.month + 1,
-        1,
-      );
+      final nextMonthStart = DateTime(now.year, now.month + 1, 1);
 
       // ========================================================
       // جلب فواتير اليوم
       // ========================================================
 
-      final newTodayInvoices =
-          await DatabaseHelper.instance
-              .getInvoicesByPeriod(
-        startDate: todayStart,
-        endDate: tomorrowStart,
-      );
+      final newTodayInvoices = await DatabaseHelper.instance
+          .getInvoicesByPeriod(startDate: todayStart, endDate: tomorrowStart);
 
       // ========================================================
       // جلب مبيعات اليوم
       // ========================================================
 
-      final newTodaySales =
-          await DatabaseHelper.instance
-              .getSalesTotalByPeriod(
+      final newTodaySales = await DatabaseHelper.instance.getSalesTotalByPeriod(
         startDate: todayStart,
         endDate: tomorrowStart,
       );
@@ -120,9 +96,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // جلب أرباح اليوم
       // ========================================================
 
-      final newTodayProfit =
-          await DatabaseHelper.instance
-              .getProfitByPeriod(
+      final newTodayProfit = await DatabaseHelper.instance.getProfitByPeriod(
         startDate: todayStart,
         endDate: tomorrowStart,
       );
@@ -131,23 +105,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // الأسبوع
       // ========================================================
 
-      final newWeekInvoices =
-          await DatabaseHelper.instance
-              .getInvoicesByPeriod(
+      final newWeekInvoices = await DatabaseHelper.instance.getInvoicesByPeriod(
         startDate: weekStart,
         endDate: nextWeekStart,
       );
 
-      final newWeekSales =
-          await DatabaseHelper.instance
-              .getSalesTotalByPeriod(
+      final newWeekSales = await DatabaseHelper.instance.getSalesTotalByPeriod(
         startDate: weekStart,
         endDate: nextWeekStart,
       );
 
-      final newWeekProfit =
-          await DatabaseHelper.instance
-              .getProfitByPeriod(
+      final newWeekProfit = await DatabaseHelper.instance.getProfitByPeriod(
         startDate: weekStart,
         endDate: nextWeekStart,
       );
@@ -156,23 +124,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // الشهر
       // ========================================================
 
-      final newMonthInvoices =
-          await DatabaseHelper.instance
-              .getInvoicesByPeriod(
+      final newMonthInvoices = await DatabaseHelper.instance
+          .getInvoicesByPeriod(startDate: monthStart, endDate: nextMonthStart);
+
+      final newMonthSales = await DatabaseHelper.instance.getSalesTotalByPeriod(
         startDate: monthStart,
         endDate: nextMonthStart,
       );
 
-      final newMonthSales =
-          await DatabaseHelper.instance
-              .getSalesTotalByPeriod(
-        startDate: monthStart,
-        endDate: nextMonthStart,
-      );
-
-      final newMonthProfit =
-          await DatabaseHelper.instance
-              .getProfitByPeriod(
+      final newMonthProfit = await DatabaseHelper.instance.getProfitByPeriod(
         startDate: monthStart,
         endDate: nextMonthStart,
       );
@@ -195,9 +155,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         isLoading = false;
       });
     } catch (e) {
-      debugPrint(
-        'REPORT ERROR: $e',
-      );
+      debugPrint('REPORT ERROR: $e');
 
       if (!mounted) return;
 
@@ -208,9 +166,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red,
-          content: Text(
-            'حدث خطأ في تحميل التقارير: $e',
-          ),
+          content: Text('حدث خطأ في تحميل التقارير: $e'),
         ),
       );
     }
@@ -235,14 +191,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required double sales,
     required double profit,
   }) {
+    // هل توجد فاتورة آجلة في هذه الفترة؟
+    final hasDebt = invoices.any((invoice) => invoice.paymentType == "آجل");
+
     return Card(
       elevation: 4,
-      margin: const EdgeInsets.only(
-        bottom: 15,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      margin: const EdgeInsets.only(bottom: 15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
@@ -250,10 +205,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             context,
             MaterialPageRoute(
               builder: (_) =>
-                  ReportInvoicesScreen(
-                title: title,
-                invoices: invoices,
-              ),
+                  ReportInvoicesScreen(title: title, invoices: invoices),
             ),
           );
         },
@@ -265,12 +217,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   CircleAvatar(
                     radius: 25,
-                    backgroundColor:
-                        const Color(0xFF011236),
-                    child: Icon(
-                      icon,
-                      color: Colors.white,
-                    ),
+                    backgroundColor: hasDebt
+                        ? Colors.blue
+                        : const Color(0xFF011236),
+                    child: Icon(icon, color: Colors.white),
                   ),
 
                   const SizedBox(width: 12),
@@ -278,12 +228,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 21,
                         fontWeight: FontWeight.bold,
+                        color: hasDebt ? Colors.blue : Colors.black,
                       ),
                     ),
                   ),
+
+                  if (hasDebt)
+                    const Icon(Icons.credit_card, color: Colors.blue, size: 22),
+
+                  const SizedBox(width: 8),
 
                   const Icon(
                     Icons.arrow_forward_ios,
@@ -305,17 +261,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.receipt_long,
-                          color: Colors.blue,
+                          color: hasDebt ? Colors.blue : Colors.blue,
                         ),
 
                         const SizedBox(height: 5),
 
-                        const Text(
+                        Text(
                           'القوائم',
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: hasDebt ? Colors.blue : Colors.grey,
                           ),
                         ),
 
@@ -323,10 +279,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
                         Text(
                           '${invoices.length}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 20,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
+                            color: hasDebt ? Colors.blue : Colors.black,
                           ),
                         ),
                       ],
@@ -337,18 +293,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        const Icon(
-                          Icons.point_of_sale,
-                          color: Colors.green,
-                        ),
+                        const Icon(Icons.point_of_sale, color: Colors.green),
 
                         const SizedBox(height: 5),
 
                         const Text(
                           'المبيعات',
-                          style: TextStyle(
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(color: Colors.grey),
                         ),
 
                         const SizedBox(height: 4),
@@ -357,8 +308,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           formatMoney(sales),
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                             color: Colors.green,
                           ),
                         ),
@@ -370,18 +320,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        const Icon(
-                          Icons.trending_up,
-                          color: Colors.orange,
-                        ),
+                        const Icon(Icons.trending_up, color: Colors.orange),
 
                         const SizedBox(height: 5),
 
                         const Text(
                           'الأرباح',
-                          style: TextStyle(
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(color: Colors.grey),
                         ),
 
                         const SizedBox(height: 4),
@@ -390,8 +335,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           formatMoney(profit),
                           style: const TextStyle(
                             fontSize: 16,
-                            fontWeight:
-                                FontWeight.bold,
+                            fontWeight: FontWeight.bold,
                             color: Colors.orange,
                           ),
                         ),
@@ -406,7 +350,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
   }
-
   // ============================================================
   // بطاقة الأرباح
   // ============================================================
@@ -418,17 +361,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }) {
     return Expanded(
       child: Container(
-        margin: const EdgeInsets.symmetric(
-          horizontal: 4,
-        ),
-        padding: const EdgeInsets.symmetric(
-          vertical: 18,
-          horizontal: 6,
-        ),
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 6),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius:
-              BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: const [
             BoxShadow(
               blurRadius: 5,
@@ -439,20 +376,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: Colors.green,
-              size: 30,
-            ),
+            Icon(icon, color: Colors.green, size: 30),
 
             const SizedBox(height: 8),
 
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 8),
@@ -479,12 +409,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFF011236),
+      backgroundColor: const Color(0xFF011236),
 
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xFF011236),
+        backgroundColor: const Color(0xFF011236),
         elevation: 0,
         centerTitle: true,
 
@@ -501,10 +429,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           IconButton(
             tooltip: 'تحديث',
             onPressed: loadReports,
-            icon: const Icon(
-              Icons.refresh,
-              color: Colors.white,
-            ),
+            icon: const Icon(Icons.refresh, color: Colors.white),
           ),
         ],
       ),
@@ -515,35 +440,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft:
-                Radius.circular(40),
-            topRight:
-                Radius.circular(40),
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(40),
           ),
         ),
 
         child: isLoading
-            ? const Center(
-                child:
-                    CircularProgressIndicator(),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: loadReports,
 
                 child: ListView(
-                  physics:
-                      const AlwaysScrollableScrollPhysics(),
+                  physics: const AlwaysScrollableScrollPhysics(),
 
-                  padding:
-                      const EdgeInsets.all(18),
+                  padding: const EdgeInsets.all(18),
 
                   children: [
                     const Text(
                       'القوائم',
                       style: TextStyle(
                         fontSize: 25,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
 
@@ -553,33 +470,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     reportCard(
                       title: 'قوائم اليوم',
                       icon: Icons.today,
-                      invoices:
-                          todayInvoices,
+                      invoices: todayInvoices,
                       sales: todaySales,
-                      profit:
-                          todayProfit,
+                      profit: todayProfit,
                     ),
 
                     // الأسبوع
                     reportCard(
                       title: 'قوائم الأسبوع',
                       icon: Icons.date_range,
-                      invoices:
-                          weekInvoices,
+                      invoices: weekInvoices,
                       sales: weekSales,
-                      profit:
-                          weekProfit,
+                      profit: weekProfit,
                     ),
 
                     // الشهر
                     reportCard(
                       title: 'قوائم الشهر',
                       icon: Icons.calendar_month,
-                      invoices:
-                          monthInvoices,
+                      invoices: monthInvoices,
                       sales: monthSales,
-                      profit:
-                          monthProfit,
+                      profit: monthProfit,
                     ),
 
                     const SizedBox(height: 10),
@@ -588,8 +499,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       'الأرباح',
                       style: TextStyle(
                         fontSize: 25,
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
 
@@ -599,26 +509,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       children: [
                         profitCard(
                           title: 'اليوم',
-                          profit:
-                              todayProfit,
-                          icon:
-                              Icons.today,
+                          profit: todayProfit,
+                          icon: Icons.today,
                         ),
 
                         profitCard(
                           title: 'الأسبوع',
-                          profit:
-                              weekProfit,
-                          icon:
-                              Icons.date_range,
+                          profit: weekProfit,
+                          icon: Icons.date_range,
                         ),
 
                         profitCard(
                           title: 'الشهر',
-                          profit:
-                              monthProfit,
-                          icon:
-                              Icons.calendar_month,
+                          profit: monthProfit,
+                          icon: Icons.calendar_month,
                         ),
                       ],
                     ),
@@ -628,65 +532,40 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     // إجمالي المبيعات
                     Card(
                       elevation: 3,
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(
-                          18,
-                        ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       child: Padding(
-                        padding:
-                            const EdgeInsets.all(
-                          18,
-                        ),
+                        padding: const EdgeInsets.all(18),
                         child: Column(
                           children: [
                             const Text(
                               'إجمالي المبيعات',
-                              style:
-                                  TextStyle(
+                              style: TextStyle(
                                 fontSize: 21,
-                                fontWeight:
-                                    FontWeight.bold,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
 
-                            const SizedBox(
-                              height: 15,
-                            ),
+                            const SizedBox(height: 15),
 
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment
-                                      .spaceAround,
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 Column(
                                   children: [
                                     const Text(
                                       'اليوم',
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            Colors.grey,
-                                      ),
+                                      style: TextStyle(color: Colors.grey),
                                     ),
 
-                                    const SizedBox(
-                                      height: 5,
-                                    ),
+                                    const SizedBox(height: 5),
 
                                     Text(
-                                      formatMoney(
-                                        todaySales,
-                                      ),
-                                      style:
-                                          const TextStyle(
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                        color:
-                                            Colors.green,
+                                      formatMoney(todaySales),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
                                       ),
                                     ),
                                   ],
@@ -696,28 +575,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   children: [
                                     const Text(
                                       'الأسبوع',
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            Colors.grey,
-                                      ),
+                                      style: TextStyle(color: Colors.grey),
                                     ),
 
-                                    const SizedBox(
-                                      height: 5,
-                                    ),
+                                    const SizedBox(height: 5),
 
                                     Text(
-                                      formatMoney(
-                                        weekSales,
-                                      ),
-                                      style:
-                                          const TextStyle(
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                        color:
-                                            Colors.green,
+                                      formatMoney(weekSales),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
                                       ),
                                     ),
                                   ],
@@ -727,28 +594,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   children: [
                                     const Text(
                                       'الشهر',
-                                      style:
-                                          TextStyle(
-                                        color:
-                                            Colors.grey,
-                                      ),
+                                      style: TextStyle(color: Colors.grey),
                                     ),
 
-                                    const SizedBox(
-                                      height: 5,
-                                    ),
+                                    const SizedBox(height: 5),
 
                                     Text(
-                                      formatMoney(
-                                        monthSales,
-                                      ),
-                                      style:
-                                          const TextStyle(
-                                        fontWeight:
-                                            FontWeight
-                                                .bold,
-                                        color:
-                                            Colors.green,
+                                      formatMoney(monthSales),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
                                       ),
                                     ),
                                   ],
@@ -761,6 +616,79 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
 
                     const SizedBox(height: 30),
+
+                    // ========================================================
+                    // كارد الديون
+                    // ========================================================
+                    const SizedBox(height: 20),
+
+                    Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const DebtScreen(),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 28,
+                                backgroundColor: Colors.blue,
+                                child: Icon(
+                                  Icons.credit_card,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+
+                              const SizedBox(width: 15),
+
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "الديون",
+                                      style: TextStyle(
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue,
+                                      ),
+                                    ),
+
+                                    SizedBox(height: 5),
+
+                                    Text(
+                                      "عرض جميع القوائم الآجلة",
+                                      style: TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const Icon(
+                                Icons.arrow_forward_ios,
+                                color: Colors.blue,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -773,8 +701,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 // صفحة فواتير التقرير
 // ==================================================================
 
-class ReportInvoicesScreen
-    extends StatelessWidget {
+class ReportInvoicesScreen extends StatelessWidget {
   final String title;
   final List<InvoiceModel> invoices;
 
@@ -791,22 +718,24 @@ class ReportInvoicesScreen
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFF011236),
+      backgroundColor: const Color(0xFF011236),
 
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xFF011236),
+        backgroundColor: const Color(0xFF011236),
         elevation: 0,
         centerTitle: true,
 
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Column(
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
 
@@ -816,10 +745,8 @@ class ReportInvoicesScreen
         decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft:
-                Radius.circular(40),
-            topRight:
-                Radius.circular(40),
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(40),
           ),
         ),
 
@@ -827,57 +754,39 @@ class ReportInvoicesScreen
             ? const Center(
                 child: Text(
                   'لا توجد قوائم في هذه الفترة',
-                  style: TextStyle(
-                    fontSize: 20,
-                  ),
+                  style: TextStyle(fontSize: 20),
                 ),
               )
             : ListView.builder(
-                padding:
-                    const EdgeInsets.all(15),
+                padding: const EdgeInsets.all(15),
 
-                itemCount:
-                    invoices.length,
+                itemCount: invoices.length,
 
-                itemBuilder:
-                    (context, index) {
-                  final invoice =
-                      invoices[index];
+                itemBuilder: (context, index) {
+                  final invoice = invoices[index];
 
                   return Card(
                     elevation: 3,
 
-                    margin:
-                        const EdgeInsets.only(
-                      bottom: 10,
-                    ),
+                    margin: const EdgeInsets.only(bottom: 10),
 
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                        15,
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
                     ),
 
                     child: ListTile(
-                      leading:
-                          const CircleAvatar(
-                        backgroundColor:
-                            Color(0xFF011236),
-                        child: Icon(
-                          Icons.receipt,
-                          color:
-                              Colors.white,
-                        ),
+                      leading: const CircleAvatar(
+                        backgroundColor: Color(0xFF011236),
+                        child: Icon(Icons.receipt, color: Colors.white),
                       ),
 
                       title: Text(
                         invoice.customerName,
-                        style:
-                            const TextStyle(
-                          fontWeight:
-                              FontWeight.bold,
+                        style: TextStyle(
+                          color: invoice.paymentType == "آجل"
+                              ? Colors.blue
+                              : Colors.black,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
 
@@ -888,15 +797,10 @@ class ReportInvoicesScreen
                       ),
 
                       trailing: Text(
-                        formatMoney(
-                          invoice.total,
-                        ),
-                        style:
-                            const TextStyle(
-                          color:
-                              Colors.green,
-                          fontWeight:
-                              FontWeight.bold,
+                        formatMoney(invoice.total),
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
 
@@ -905,10 +809,7 @@ class ReportInvoicesScreen
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
-                                InvoiceDetailsScreen(
-                              invoice:
-                                  invoice,
-                            ),
+                                InvoiceDetailsScreen(invoice: invoice),
                           ),
                         );
                       },

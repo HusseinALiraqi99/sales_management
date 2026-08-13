@@ -198,10 +198,7 @@ class _SalesScreenState extends State<SalesScreen> {
                         value: "نقدي",
                         child: Text("نقدي"),
                       ),
-                      DropdownMenuItem(
-                        value: "بطاقة",
-                        child: Text("بطاقة"),
-                      ),
+                     
                       DropdownMenuItem(
                         value: "آجل",
                         child: Text("آجل"),

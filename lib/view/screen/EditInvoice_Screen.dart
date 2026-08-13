@@ -256,6 +256,7 @@ Future<void> saveEdit() async {
         total: totalPrice,
         paymentType: paymentType,
         notes: widget.invoice.notes,
+
       ),
       cart,
     );
@@ -375,10 +376,7 @@ Future<void> saveEdit() async {
                         value: "نقدي",
                         child: Text("نقدي"),
                       ),
-                      DropdownMenuItem(
-                        value: "بطاقة",
-                        child: Text("بطاقة"),
-                      ),
+                  
                       DropdownMenuItem(
                         value: "آجل",
                         child: Text("آجل"),

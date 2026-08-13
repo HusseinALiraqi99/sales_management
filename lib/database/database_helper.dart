@@ -711,4 +711,61 @@ class DatabaseHelper {
 
     _database = null;
   }
+  Future<List<InvoiceModel>> getDebtInvoices() async {
+  final db = await database;
+
+  final maps = await db.query(
+    'invoices',
+    where: 'paymentType = ?',
+    whereArgs: ['آجل'],
+    orderBy: 'id DESC',
+  );
+
+  return List.generate(
+    maps.length,
+    (index) => InvoiceModel.fromMap(maps[index]),
+  );
+}
+Future<List<InvoiceModel>> getDebtHistory() async {
+  final db = await database;
+
+  final maps = await db.query(
+    'invoices',
+    where: 'paymentType = ?',
+    whereArgs: ['آجل'],
+    orderBy: 'id DESC',
+  );
+
+  return List.generate(
+    maps.length,
+    (index) => InvoiceModel.fromMap(
+      maps[index],
+    ),
+  );
+}
+Future<List<InvoiceModel>> searchDebtHistory(
+  String customerName,
+) async {
+  final db = await database;
+
+  final maps = await db.query(
+    'invoices',
+    where:
+        'paymentType = ? AND customerName LIKE ?',
+    whereArgs: [
+      'آجل',
+      '%$customerName%',
+    ],
+    orderBy: 'id DESC',
+  );
+
+  return List.generate(
+    maps.length,
+    (index) => InvoiceModel.fromMap(
+      maps[index],
+    ),
+  );
+}
+
+
 }
