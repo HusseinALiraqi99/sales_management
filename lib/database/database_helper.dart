@@ -2,6 +2,7 @@ import 'package:path/path.dart';
 import 'package:sales_management/models/cart_item_model.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../models/debt_payment_model.dart';
 import '../models/invoice_model.dart';
 import '../models/product_model.dart';
 import '../models/sale_model.dart';
@@ -14,7 +15,7 @@ class DatabaseHelper {
   static Database? _database;
 
   // ============================================================
-  // Database
+  // DATABASE
   // ============================================================
 
   Future<Database> get database async {
@@ -23,7 +24,6 @@ class DatabaseHelper {
     }
 
     _database = await _initDatabase();
-
     return _database!;
   }
 
@@ -44,13 +44,14 @@ class DatabaseHelper {
   }
 
   // ============================================================
-  // إنشاء قاعدة البيانات
+  // CREATE DATABASE
   // ============================================================
 
   Future<void> _onCreate(
     Database db,
     int version,
   ) async {
+    // PRODUCTS
     await db.execute('''
       CREATE TABLE products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,6 +64,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // INVOICES
     await db.execute('''
       CREATE TABLE invoices(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,6 +76,7 @@ class DatabaseHelper {
       )
     ''');
 
+    // SALES
     await db.execute('''
       CREATE TABLE sales(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,10 +90,20 @@ class DatabaseHelper {
         saleDate TEXT
       )
     ''');
+
+    // DEBT PAYMENTS
+    await db.execute('''
+      CREATE TABLE debt_payments(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customerName TEXT NOT NULL,
+        amount REAL NOT NULL,
+        paymentDate TEXT NOT NULL
+      )
+    ''');
   }
 
   // ============================================================
-  // تحديث قاعدة البيانات
+  // DATABASE UPGRADE
   // ============================================================
 
   Future<void> _onUpgrade(
@@ -98,7 +111,7 @@ class DatabaseHelper {
     int oldVersion,
     int newVersion,
   ) async {
-    // إضافة invoiceId إلى sales إذا كانت قاعدة البيانات قديمة
+    // VERSION 3
     if (oldVersion < 3) {
       final columns = await db.rawQuery(
         'PRAGMA table_info(sales)',
@@ -109,15 +122,24 @@ class DatabaseHelper {
       );
 
       if (!hasInvoiceId) {
-        await db.execute(
-          'ALTER TABLE sales ADD COLUMN invoiceId INTEGER',
-        );
+        await db.execute('''
+          ALTER TABLE sales
+          ADD COLUMN invoiceId INTEGER
+        ''');
       }
     }
 
-    // الإصدار 4 لا يحتاج تغييرًا في الجداول.
-    // رفعنا الإصدار حتى تتم إعادة فتح قاعدة البيانات
-    // بشكل صحيح مع النسخ السابقة.
+    // VERSION 4
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS debt_payments(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          customerName TEXT NOT NULL,
+          amount REAL NOT NULL,
+          paymentDate TEXT NOT NULL
+        )
+      ''');
+    }
   }
 
   // ============================================================
@@ -145,9 +167,7 @@ class DatabaseHelper {
 
     return List.generate(
       maps.length,
-      (index) => ProductModel.fromMap(
-        maps[index],
-      ),
+      (index) => ProductModel.fromMap(maps[index]),
     );
   }
 
@@ -192,9 +212,7 @@ class DatabaseHelper {
 
     return List.generate(
       maps.length,
-      (index) => ProductModel.fromMap(
-        maps[index],
-      ),
+      (index) => ProductModel.fromMap(maps[index]),
     );
   }
 
@@ -263,9 +281,7 @@ class DatabaseHelper {
       return null;
     }
 
-    return ProductModel.fromMap(
-      result.first,
-    );
+    return ProductModel.fromMap(result.first);
   }
 
   Future<ProductModel?> getProductById(
@@ -283,9 +299,7 @@ class DatabaseHelper {
       return null;
     }
 
-    return ProductModel.fromMap(
-      result.first,
-    );
+    return ProductModel.fromMap(result.first);
   }
 
   // ============================================================
@@ -313,15 +327,9 @@ class DatabaseHelper {
 
     return List.generate(
       maps.length,
-      (index) => InvoiceModel.fromMap(
-        maps[index],
-      ),
+      (index) => InvoiceModel.fromMap(maps[index]),
     );
   }
-
-  // ============================================================
-  // جلب الفواتير حسب الفترة
-  // ============================================================
 
   Future<List<InvoiceModel>> getInvoicesByPeriod({
     required DateTime startDate,
@@ -329,166 +337,95 @@ class DatabaseHelper {
   }) async {
     final db = await database;
 
-    final maps = await db.query(
-      'invoices',
-      where: 'date >= ? AND date < ?',
-      whereArgs: [
+    final maps = await db.rawQuery(
+      '''
+      SELECT *
+      FROM invoices
+      WHERE date >= ?
+      AND date < ?
+      ORDER BY id DESC
+      ''',
+      [
         startDate.toString(),
         endDate.toString(),
       ],
-      orderBy: 'id DESC',
     );
 
     return List.generate(
       maps.length,
-      (index) => InvoiceModel.fromMap(
-        maps[index],
-      ),
+      (index) => InvoiceModel.fromMap(maps[index]),
     );
   }
 
-  // ============================================================
-  // اليوم
-  // ============================================================
+  Future<int> deleteInvoice(
+    int id,
+  ) async {
+    final db = await database;
 
-  Future<List<InvoiceModel>> getTodayInvoices() async {
-    final now = DateTime.now();
-
-    final start = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
-
-    final end = start.add(
-      const Duration(days: 1),
-    );
-
-    return await getInvoicesByPeriod(
-      startDate: start,
-      endDate: end,
+    return await db.delete(
+      'invoices',
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 
-  // ============================================================
-  // الأسبوع
-  // ============================================================
+  Future<void> deleteInvoiceWithSales(
+    int invoiceId,
+  ) async {
+    final db = await database;
 
-  Future<List<InvoiceModel>> getWeekInvoices() async {
-    final now = DateTime.now();
+    await db.transaction(
+      (txn) async {
+        await txn.delete(
+          'sales',
+          where: 'invoiceId = ?',
+          whereArgs: [invoiceId],
+        );
 
-    final today = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
-
-    final start = today.subtract(
-      Duration(days: now.weekday - 1),
-    );
-
-    final end = start.add(
-      const Duration(days: 7),
-    );
-
-    return await getInvoicesByPeriod(
-      startDate: start,
-      endDate: end,
+        await txn.delete(
+          'invoices',
+          where: 'id = ?',
+          whereArgs: [invoiceId],
+        );
+      },
     );
   }
 
-  // ============================================================
-  // الشهر
-  // ============================================================
+  Future<int> updateInvoice(
+    InvoiceModel invoice,
+  ) async {
+    final db = await database;
 
-  Future<List<InvoiceModel>> getMonthInvoices() async {
-    final now = DateTime.now();
-
-    final start = DateTime(
-      now.year,
-      now.month,
-      1,
-    );
-
-    final end = DateTime(
-      now.year,
-      now.month + 1,
-      1,
-    );
-
-    return await getInvoicesByPeriod(
-      startDate: start,
-      endDate: end,
+    return await db.update(
+      'invoices',
+      invoice.toMap(),
+      where: 'id = ?',
+      whereArgs: [invoice.id],
     );
   }
 
-  // ============================================================
-  // مجموع مبيعات الفترة
-  // ============================================================
-
-  Future<double> getSalesTotalByPeriod({
-    required DateTime startDate,
-    required DateTime endDate,
+  Future<void> updateInvoiceData({
+    required int invoiceId,
+    required String customerName,
+    required String date,
+    required double total,
+    required String paymentType,
+    required String notes,
   }) async {
     final db = await database;
 
-    final result = await db.rawQuery(
-      '''
-      SELECT SUM(total) AS total
-      FROM invoices
-      WHERE date >= ?
-      AND date < ?
-      ''',
-      [
-        startDate.toString(),
-        endDate.toString(),
-      ],
+    await db.update(
+      'invoices',
+      {
+        'customerName': customerName,
+        'date': date,
+        'total': total,
+        'paymentType': paymentType,
+        'notes': notes,
+      },
+      where: 'id = ?',
+      whereArgs: [invoiceId],
     );
-
-    final value = result.first['total'];
-
-    if (value == null) {
-      return 0;
-    }
-
-    return (value as num).toDouble();
-  }
-
-  // ============================================================
-  // الأرباح
-  // ============================================================
-
-  Future<double> getProfitByPeriod({
-    required DateTime startDate,
-    required DateTime endDate,
-  }) async {
-    final db = await database;
-
-    final result = await db.rawQuery(
-      '''
-      SELECT SUM(
-        (sales.price - products.buyPrice)
-        * sales.quantity
-      ) AS profit
-      FROM sales
-      INNER JOIN products
-      ON sales.productId = products.id
-      WHERE sales.saleDate >= ?
-      AND sales.saleDate < ?
-      ''',
-      [
-        startDate.toString(),
-        endDate.toString(),
-      ],
-    );
-
-    final value = result.first['profit'];
-
-    if (value == null) {
-      return 0;
-    }
-
-    return (value as num).toDouble();
   }
 
   // ============================================================
@@ -516,9 +453,7 @@ class DatabaseHelper {
 
     return List.generate(
       maps.length,
-      (index) => SaleModel.fromMap(
-        maps[index],
-      ),
+      (index) => SaleModel.fromMap(maps[index]),
     );
   }
 
@@ -536,9 +471,7 @@ class DatabaseHelper {
 
     return List.generate(
       maps.length,
-      (index) => SaleModel.fromMap(
-        maps[index],
-      ),
+      (index) => SaleModel.fromMap(maps[index]),
     );
   }
 
@@ -549,159 +482,363 @@ class DatabaseHelper {
   }
 
   // ============================================================
-  // حذف فاتورة + مبيعاتها
+  // UPDATE INVOICE WITH CART
   // ============================================================
 
-  Future<void> deleteInvoiceWithSales(
-    int invoiceId,
+  Future<void> updateInvoiceWithCart(
+    InvoiceModel invoice,
+    List<CartItemModel> cart,
   ) async {
     final db = await database;
 
     await db.transaction(
       (txn) async {
+        final oldSales = await txn.query(
+          'sales',
+          where: 'invoiceId = ?',
+          whereArgs: [invoice.id],
+        );
+
+        for (final sale in oldSales) {
+          final productId =
+              (sale['productId'] as num).toInt();
+
+          final oldQuantity =
+              (sale['quantity'] as num).toInt();
+
+          await txn.rawUpdate(
+            '''
+            UPDATE products
+            SET quantity = quantity + ?
+            WHERE id = ?
+            ''',
+            [
+              oldQuantity,
+              productId,
+            ],
+          );
+        }
+
         await txn.delete(
           'sales',
           where: 'invoiceId = ?',
-          whereArgs: [invoiceId],
+          whereArgs: [invoice.id],
         );
 
-        await txn.delete(
+        for (final item in cart) {
+          await txn.insert(
+            'sales',
+            SaleModel(
+              invoiceId: invoice.id,
+              productId: item.product.id!,
+              productName: item.product.name,
+              barcode: item.product.barcode,
+              price: item.product.sellPrice,
+              quantity: item.quantity,
+              total: item.totalPrice,
+              saleDate: DateTime.now().toString(),
+            ).toMap(),
+          );
+
+          await txn.rawUpdate(
+            '''
+            UPDATE products
+            SET quantity = quantity - ?
+            WHERE id = ?
+            ''',
+            [
+              item.quantity,
+              item.product.id,
+            ],
+          );
+        }
+
+        await txn.update(
           'invoices',
+          {
+            'customerName': invoice.customerName,
+            'date': invoice.date,
+            'total': invoice.total,
+            'paymentType': invoice.paymentType,
+            'notes': invoice.notes,
+          },
           where: 'id = ?',
-          whereArgs: [invoiceId],
+          whereArgs: [invoice.id],
         );
       },
     );
   }
 
   // ============================================================
-  // حذف فاتورة فقط
+  // REPORTS
   // ============================================================
 
-  Future<int> deleteInvoice(
+  Future<double> getSalesTotalByPeriod({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final db = await database;
+
+    final result = await db.rawQuery(
+      '''
+      SELECT COALESCE(SUM(total), 0) AS total
+      FROM sales
+      WHERE saleDate >= ?
+      AND saleDate < ?
+      ''',
+      [
+        startDate.toString(),
+        endDate.toString(),
+      ],
+    );
+
+    return (result.first['total'] as num?)
+            ?.toDouble() ??
+        0.0;
+  }
+
+  Future<double> getProfitByPeriod({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final db = await database;
+
+    final result = await db.rawQuery(
+      '''
+      SELECT
+        COALESCE(
+          SUM(
+            (sales.price - products.buyPrice)
+            * sales.quantity
+          ),
+          0
+        ) AS profit
+      FROM sales
+      INNER JOIN products
+        ON sales.productId = products.id
+      WHERE sales.saleDate >= ?
+      AND sales.saleDate < ?
+      ''',
+      [
+        startDate.toString(),
+        endDate.toString(),
+      ],
+    );
+
+    return (result.first['profit'] as num?)
+            ?.toDouble() ??
+        0.0;
+  }
+
+  // ============================================================
+  // DEBTS
+  // ============================================================
+
+  Future<List<InvoiceModel>> getDebtInvoices() async {
+    final db = await database;
+
+    final maps = await db.query(
+      'invoices',
+      where: 'paymentType = ?',
+      whereArgs: ['آجل'],
+      orderBy: 'id DESC',
+    );
+
+    return List.generate(
+      maps.length,
+      (index) => InvoiceModel.fromMap(maps[index]),
+    );
+  }
+
+  Future<List<InvoiceModel>> getDebtHistory() async {
+    final db = await database;
+
+    final maps = await db.query(
+      'invoices',
+      where: 'paymentType = ?',
+      whereArgs: ['آجل'],
+      orderBy: 'id DESC',
+    );
+
+    return List.generate(
+      maps.length,
+      (index) => InvoiceModel.fromMap(maps[index]),
+    );
+  }
+
+  Future<List<InvoiceModel>> searchDebtHistory(
+    String customerName,
+  ) async {
+    final db = await database;
+
+    final maps = await db.query(
+      'invoices',
+      where:
+          'paymentType = ? AND customerName LIKE ?',
+      whereArgs: [
+        'آجل',
+        '%$customerName%',
+      ],
+      orderBy: 'id DESC',
+    );
+
+    return List.generate(
+      maps.length,
+      (index) => InvoiceModel.fromMap(maps[index]),
+    );
+  }
+
+  // ============================================================
+  // DEBT PAYMENTS
+  // ============================================================
+
+Future<int> insertDebtPayment(
+  DebtPaymentModel payment,
+) async {
+  final db = await database;
+
+  try {
+    final id = await db.insert(
+      'debt_payments',
+      {
+        'customerName': payment.customerName.trim(),
+        'amount': payment.amount,
+        'paymentDate': payment.paymentDate,
+      },
+    );
+
+    return id;
+  } catch (e) {
+    print('ERROR INSERT DEBT PAYMENT: $e');
+    rethrow;
+  }
+}
+
+  // ============================================================
+  // أسماء الزبائن أصحاب الديون
+  // ============================================================
+
+  Future<List<String>> getDebtCustomerNames() async {
+    final db = await database;
+
+    final result = await db.rawQuery(
+      '''
+      SELECT DISTINCT TRIM(customerName) AS customerName
+      FROM invoices
+      WHERE paymentType = ?
+        AND customerName IS NOT NULL
+        AND TRIM(customerName) != ''
+      ORDER BY customerName ASC
+      ''',
+      ['آجل'],
+    );
+
+    return result
+        .map(
+          (row) => row['customerName'].toString(),
+        )
+        .where(
+          (name) => name.trim().isNotEmpty,
+        )
+        .toList();
+  }
+
+  // ============================================================
+  // بيانات دين الزبون
+  // ============================================================
+
+Future<Map<String, double>> getCustomerDebtData(
+  String customerName,
+) async {
+  final db = await database;
+
+  final name = customerName.trim();
+
+  // إجمالي الفواتير الآجلة
+  final debtResult = await db.rawQuery(
+    '''
+    SELECT COALESCE(SUM(total), 0) AS total
+    FROM invoices
+    WHERE TRIM(customerName) = ?
+      AND TRIM(paymentType) = ?
+    ''',
+    [
+      name,
+      'آجل',
+    ],
+  );
+
+  // إجمالي التسديدات
+  final paidResult = await db.rawQuery(
+    '''
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM debt_payments
+    WHERE TRIM(customerName) = ?
+    ''',
+    [
+      name,
+    ],
+  );
+
+  final double debt =
+      ((debtResult.first['total'] as num?) ?? 0)
+          .toDouble();
+
+  final double paid =
+      ((paidResult.first['total'] as num?) ?? 0)
+          .toDouble();
+
+  double remaining = debt - paid;
+
+  if (remaining < 0) {
+    remaining = 0.0;
+  }
+
+  return {
+    'debt': debt,
+    'paid': paid,
+    'remaining': remaining,
+  };
+}
+
+  // ============================================================
+  // جميع التسديدات
+  // ============================================================
+
+  Future<List<DebtPaymentModel>> getDebtPayments() async {
+    final db = await database;
+
+    final maps = await db.query(
+      'debt_payments',
+      orderBy: 'id DESC',
+    );
+
+    return List.generate(
+      maps.length,
+      (index) => DebtPaymentModel.fromMap(
+        maps[index],
+      ),
+    );
+  }
+
+  // ============================================================
+  // حذف تسديد
+  // ============================================================
+
+  Future<int> deleteDebtPayment(
     int id,
   ) async {
     final db = await database;
 
     return await db.delete(
-      'invoices',
+      'debt_payments',
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
   // ============================================================
-  // تحديث الفاتورة
-  // ============================================================
-
- Future<void> updateInvoice(
-  InvoiceModel invoice,
-  List<CartItemModel> cart,
-) async {
-  final db = await database;
-
-  await db.transaction((txn) async {
-    // 1️⃣ جلب المبيعات القديمة للفاتورة
-    final oldSales = await txn.query(
-      'sales',
-      where: 'invoiceId = ?',
-      whereArgs: [invoice.id],
-    );
-
-    // 2️⃣ إعادة الكميات القديمة إلى المخزن
-    for (final sale in oldSales) {
-      final productId = sale['productId'] as int;
-      final oldQuantity = sale['quantity'] as int;
-
-      await txn.rawUpdate(
-        '''
-        UPDATE products
-        SET quantity = quantity + ?
-        WHERE id = ?
-        ''',
-        [oldQuantity, productId],
-      );
-    }
-
-    // 3️⃣ حذف مبيعات الفاتورة القديمة
-    await txn.delete(
-      'sales',
-      where: 'invoiceId = ?',
-      whereArgs: [invoice.id],
-    );
-
-    // 4️⃣ إضافة المبيعات الجديدة
-    for (final item in cart) {
-      await txn.insert(
-        'sales',
-        SaleModel(
-          invoiceId: invoice.id,
-          productId: item.product.id!,
-          productName: item.product.name,
-          barcode: item.product.barcode,
-          price: item.product.sellPrice,
-          quantity: item.quantity,
-          total: item.totalPrice,
-          saleDate: DateTime.now().toString(),
-        ).toMap(),
-      );
-
-      // 5️⃣ خصم الكمية الجديدة من المخزن
-      await txn.rawUpdate(
-        '''
-        UPDATE products
-        SET quantity = quantity - ?
-        WHERE id = ?
-        ''',
-        [
-          item.quantity,
-          item.product.id,
-        ],
-      );
-    }
-
-    // 6️⃣ تحديث بيانات الفاتورة والإجمالي الجديد
-    await txn.update(
-      'invoices',
-      {
-        'customerName': invoice.customerName,
-        'date': invoice.date,
-        'total': invoice.total,
-        'paymentType': invoice.paymentType,
-        'notes': invoice.notes,
-      },
-      where: 'id = ?',
-      whereArgs: [invoice.id],
-    );
-  });
-}
-
-  Future<void> updateInvoiceData({
-  required int invoiceId,
-  required String customerName,
-  required String date,
-  required double total,
-  required String paymentType,
-  required String notes,
-}) async {
-  final db = await database;
-
-  await db.update(
-    'invoices',
-    {
-      'customerName': customerName,
-      'date': date,
-      'total': total,
-      'paymentType': paymentType,
-      'notes': notes,
-    },
-    where: 'id = ?',
-    whereArgs: [invoiceId],
-  );
-}
-
-  // ============================================================
-  // إغلاق قاعدة البيانات
+  // CLOSE
   // ============================================================
 
   Future<void> close() async {
@@ -711,61 +848,87 @@ class DatabaseHelper {
 
     _database = null;
   }
-  Future<List<InvoiceModel>> getDebtInvoices() async {
-  final db = await database;
+  // ============================================================
+// إجمالي دين الزبون
+// ============================================================
 
-  final maps = await db.query(
-    'invoices',
-    where: 'paymentType = ?',
-    whereArgs: ['آجل'],
-    orderBy: 'id DESC',
-  );
-
-  return List.generate(
-    maps.length,
-    (index) => InvoiceModel.fromMap(maps[index]),
-  );
-}
-Future<List<InvoiceModel>> getDebtHistory() async {
-  final db = await database;
-
-  final maps = await db.query(
-    'invoices',
-    where: 'paymentType = ?',
-    whereArgs: ['آجل'],
-    orderBy: 'id DESC',
-  );
-
-  return List.generate(
-    maps.length,
-    (index) => InvoiceModel.fromMap(
-      maps[index],
-    ),
-  );
-}
-Future<List<InvoiceModel>> searchDebtHistory(
+Future<double> getCustomerDebtAmount(
   String customerName,
 ) async {
   final db = await database;
 
-  final maps = await db.query(
-    'invoices',
-    where:
-        'paymentType = ? AND customerName LIKE ?',
-    whereArgs: [
-      'آجل',
-      '%$customerName%',
-    ],
-    orderBy: 'id DESC',
-  );
+  final name = customerName.trim();
 
-  return List.generate(
-    maps.length,
-    (index) => InvoiceModel.fromMap(
-      maps[index],
-    ),
-  );
+ final result = await db.rawQuery(
+  '''
+  SELECT id, customerName, paymentType, total
+  FROM invoices
+  WHERE TRIM(customerName) = ?
+  ''',
+  [name],
+);
+
+print("================================");
+print("CUSTOMER: $name");
+print("INVOICES: $result");
+print("================================");
+
+
+  final value = result.first['total'];
+
+  if (value == null) {
+    return 0.0;
+  }
+
+  return (value as num).toDouble();
 }
 
+// ============================================================
+// إجمالي المبلغ المسدد للزبون
+// ============================================================
 
+Future<double> getCustomerPaidAmount(
+  String customerName,
+) async {
+  final db = await database;
+
+  final name = customerName.trim();
+
+  final result = await db.rawQuery(
+    '''
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM debt_payments
+    WHERE TRIM(customerName) = ?
+    ''',
+    [name],
+  );
+
+  final value = result.first['total'];
+
+  if (value == null) {
+    return 0.0;
+  }
+
+  return (value as num).toDouble();
+}
+
+// ============================================================
+// الدين المتبقي على الزبون
+// ============================================================
+
+Future<double> getCustomerRemainingDebt(
+  String customerName,
+) async {
+  final debt = await getCustomerDebtAmount(customerName);
+
+  final paid = await getCustomerPaidAmount(customerName);
+
+  final remaining = debt - paid;
+
+  if (remaining <= 0) {
+    return 0.0;
+  }
+
+  return remaining;
+}
 }

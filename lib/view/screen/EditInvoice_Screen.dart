@@ -248,18 +248,20 @@ Future<void> saveEdit() async {
             ? "نقدي"
             : customerController.text.trim();
 
-    await DatabaseHelper.instance.updateInvoice(
-      InvoiceModel(
-        id: widget.invoice.id,
-        customerName: customerName,
-        date: widget.invoice.date,
-        total: totalPrice,
-        paymentType: paymentType,
-        notes: widget.invoice.notes,
-
-      ),
-      cart,
-    );
+await DatabaseHelper.instance.updateInvoiceWithCart(
+  InvoiceModel(
+    id: widget.invoice.id,
+    customerName:
+        customerController.text.trim().isEmpty
+            ? "نقدي"
+            : customerController.text.trim(),
+    date: widget.invoice.date,
+    total: totalPrice,
+    paymentType: paymentType,
+    notes: widget.invoice.notes,
+  ),
+  cart,
+);
 
     // التأكد من تحديث بيانات الفاتورة بالإجمالي الجديد
     await DatabaseHelper.instance.updateInvoiceData(
