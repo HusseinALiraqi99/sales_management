@@ -17,14 +17,12 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
   // CONTROLLERS
   // ============================================================
 
-  final TextEditingController searchController =
-      TextEditingController();
+  final TextEditingController searchController = TextEditingController();
 
   // مهم:
   // هذا Controller تابع للصفحة وليس للـ Dialog
   // لذلك لا يتم عمل dispose له عند إغلاق Dialog.
-  final TextEditingController amountController =
-      TextEditingController();
+  final TextEditingController amountController = TextEditingController();
 
   // ============================================================
   // DATA
@@ -63,8 +61,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
 
   Future<void> loadHistory() async {
     try {
-      final debts =
-          await DatabaseHelper.instance.getDebtHistory();
+      final debts = await DatabaseHelper.instance.getDebtHistory();
 
       if (!mounted) return;
 
@@ -74,9 +71,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
         isLoading = false;
       });
     } catch (e) {
-      debugPrint(
-        'ERROR LOAD DEBT HISTORY: $e',
-      );
+      debugPrint('ERROR LOAD DEBT HISTORY: $e');
 
       if (!mounted) return;
 
@@ -87,9 +82,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red,
-          content: Text(
-            'حدث خطأ أثناء تحميل الديون: $e',
-          ),
+          content: Text('حدث خطأ أثناء تحميل الديون: $e'),
         ),
       );
     }
@@ -100,8 +93,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
   // ============================================================
 
   void searchCustomer(String value) {
-    final keyword =
-        value.trim().toLowerCase();
+    final keyword = value.trim().toLowerCase();
 
     if (!mounted) return;
 
@@ -109,11 +101,8 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
       if (keyword.isEmpty) {
         filteredDebts = allDebts;
       } else {
-        filteredDebts =
-            allDebts.where((invoice) {
-          return invoice.customerName
-              .toLowerCase()
-              .contains(keyword);
+        filteredDebts = allDebts.where((invoice) {
+          return invoice.customerName.toLowerCase().contains(keyword);
         }).toList();
       }
     });
@@ -123,23 +112,17 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
   // GROUP BY CUSTOMER
   // ============================================================
 
-  Map<String, List<InvoiceModel>>
-      get groupedDebts {
-    final Map<String, List<InvoiceModel>>
-        result = {};
+  Map<String, List<InvoiceModel>> get groupedDebts {
+    final Map<String, List<InvoiceModel>> result = {};
 
     for (final invoice in filteredDebts) {
-      final customerName =
-          invoice.customerName.trim();
+      final customerName = invoice.customerName.trim();
 
       if (customerName.isEmpty) {
         continue;
       }
 
-      result.putIfAbsent(
-        customerName,
-        () => [],
-      );
+      result.putIfAbsent(customerName, () => []);
 
       result[customerName]!.add(invoice);
     }
@@ -151,9 +134,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
   // CUSTOMER TOTAL
   // ============================================================
 
-  double customerTotal(
-    List<InvoiceModel> invoices,
-  ) {
+  double customerTotal(List<InvoiceModel> invoices) {
     double total = 0.0;
 
     for (final invoice in invoices) {
@@ -178,22 +159,16 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
     List<String> customerNames = [];
 
     try {
-      customerNames =
-          await DatabaseHelper.instance
-              .getDebtCustomerNames();
+      customerNames = await DatabaseHelper.instance.getDebtCustomerNames();
     } catch (e) {
-      debugPrint(
-        'ERROR GET CUSTOMER NAMES: $e',
-      );
+      debugPrint('ERROR GET CUSTOMER NAMES: $e');
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red,
-          content: Text(
-            'حدث خطأ أثناء جلب أسماء الزبائن: $e',
-          ),
+          content: Text('حدث خطأ أثناء جلب أسماء الزبائن: $e'),
         ),
       );
 
@@ -227,19 +202,13 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
       barrierDismissible: false,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (
-            dialogContext,
-            setDialogState,
-          ) {
+          builder: (dialogContext, setDialogState) {
             // ==================================================
             // LOAD CUSTOMER DATA
             // ==================================================
 
-            Future<void> loadCustomerData(
-              String customerName,
-            ) async {
-              final name =
-                  customerName.trim();
+            Future<void> loadCustomerData(String customerName) async {
+              final name = customerName.trim();
 
               if (name.isEmpty) {
                 setDialogState(() {
@@ -264,35 +233,23 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
               });
 
               try {
-                final data =
-                    await DatabaseHelper.instance
-                        .getCustomerDebtData(
+                final data = await DatabaseHelper.instance.getCustomerDebtData(
                   name,
                 );
 
-                final double debt =
-                    (data['debt'] ?? 0.0)
-                        .toDouble();
+                final double debt = (data['debt'] ?? 0.0).toDouble();
 
-                final double paid =
-                    (data['paid'] ?? 0.0)
-                        .toDouble();
+                final double paid = (data['paid'] ?? 0.0).toDouble();
 
-                double remaining =
-                    (data['remaining'] ?? 0.0)
-                        .toDouble();
+                double remaining = (data['remaining'] ?? 0.0).toDouble();
 
                 if (remaining < 0) {
                   remaining = 0.0;
                 }
 
-                debugPrint(
-                  'CUSTOMER: $name',
-                );
+                debugPrint('CUSTOMER: $name');
 
-                debugPrint(
-                  'DEBT DATA: $data',
-                );
+                debugPrint('DEBT DATA: $data');
 
                 if (!dialogContext.mounted) {
                   return;
@@ -303,15 +260,12 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
 
                   paidAmount = paid;
 
-                  remainingDebt =
-                      remaining;
+                  remainingDebt = remaining;
 
                   loadingCustomer = false;
                 });
               } catch (e) {
-                debugPrint(
-                  'ERROR GET CUSTOMER DEBT: $e',
-                );
+                debugPrint('ERROR GET CUSTOMER DEBT: $e');
 
                 if (!dialogContext.mounted) {
                   return;
@@ -338,41 +292,26 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                 return;
               }
 
-              final customer =
-                  selectedCustomer.trim();
+              final customer = selectedCustomer.trim();
 
               if (customer.isEmpty) {
-                ScaffoldMessenger.of(
-                  dialogContext,
-                ).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
-                    backgroundColor:
-                        Colors.red,
-                    content: Text(
-                      'اختر اسم الزبون أولاً',
-                    ),
+                    backgroundColor: Colors.red,
+                    content: Text('اختر اسم الزبون أولاً'),
                   ),
                 );
 
                 return;
               }
 
-              final amount =
-                  double.tryParse(
-                amountController.text.trim(),
-              );
+              final amount = double.tryParse(amountController.text.trim());
 
-              if (amount == null ||
-                  amount <= 0) {
-                ScaffoldMessenger.of(
-                  dialogContext,
-                ).showSnackBar(
+              if (amount == null || amount <= 0) {
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
-                    backgroundColor:
-                        Colors.red,
-                    content: Text(
-                      'أدخل مبلغًا صحيحًا',
-                    ),
+                    backgroundColor: Colors.red,
+                    content: Text('أدخل مبلغًا صحيحًا'),
                   ),
                 );
 
@@ -384,15 +323,10 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
               // ==================================================
 
               if (remainingDebt <= 0) {
-                ScaffoldMessenger.of(
-                  dialogContext,
-                ).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
-                    backgroundColor:
-                        Colors.orange,
-                    content: Text(
-                      'لا يوجد مبلغ دين متبقي على هذا الزبون',
-                    ),
+                    backgroundColor: Colors.orange,
+                    content: Text('لا يوجد مبلغ دين متبقي على هذا الزبون'),
                   ),
                 );
 
@@ -400,15 +334,10 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
               }
 
               if (amount > remainingDebt) {
-                ScaffoldMessenger.of(
-                  dialogContext,
-                ).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(
-                    backgroundColor:
-                        Colors.red,
-                    content: Text(
-                      'المبلغ أكبر من الدين المتبقي',
-                    ),
+                    backgroundColor: Colors.red,
+                    content: Text('المبلغ أكبر من الدين المتبقي'),
                   ),
                 );
 
@@ -424,20 +353,17 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
               });
 
               try {
-                final payment =
-                    DebtPaymentModel(
+                final payment = DebtPaymentModel(
                   customerName: customer,
 
                   amount: amount,
 
-                  paymentDate:
-                      DateTime.now()
-                          .toString(),
+                  paymentDate: DateTime.now().toString(),
                 );
 
-                await DatabaseHelper.instance
-                    .insertDebtPayment(
-                  payment,
+                await DatabaseHelper.instance.insertDebtPayment(payment);
+                await DatabaseHelper.instance.convertCustomerDebtToCash(
+                  selectedCustomer,
                 );
 
                 // ==================================================
@@ -445,9 +371,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                 // ==================================================
 
                 if (dialogContext.mounted) {
-                  Navigator.of(
-                    dialogContext,
-                  ).pop();
+                  Navigator.of(dialogContext).pop();
                 }
 
                 // ==================================================
@@ -468,21 +392,14 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                 // رسالة النجاح
                 // ==================================================
 
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    backgroundColor:
-                        Colors.green,
-                    content: Text(
-                      'تم تسجيل تسديد الدين بنجاح',
-                    ),
+                    backgroundColor: Colors.green,
+                    content: Text('تم تسجيل تسديد الدين بنجاح'),
                   ),
                 );
               } catch (e) {
-                debugPrint(
-                  'ERROR SAVE PAYMENT: $e',
-                );
+                debugPrint('ERROR SAVE PAYMENT: $e');
 
                 if (!dialogContext.mounted) {
                   return;
@@ -492,15 +409,10 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                   savingPayment = false;
                 });
 
-                ScaffoldMessenger.of(
-                  dialogContext,
-                ).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   SnackBar(
-                    backgroundColor:
-                        Colors.red,
-                    content: Text(
-                      'حدث خطأ أثناء حفظ التسديد: $e',
-                    ),
+                    backgroundColor: Colors.red,
+                    content: Text('حدث خطأ أثناء حفظ التسديد: $e'),
                   ),
                 );
               }
@@ -511,218 +423,126 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
             // ==================================================
 
             return AlertDialog(
-              insetPadding:
-                  const EdgeInsets.all(12),
+              insetPadding: const EdgeInsets.all(12),
 
-              shape:
-                  RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(
-                  20,
-                ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
 
               // ==================================================
               // TITLE
               // ==================================================
-
               title: const Text(
                 'تسديد دين',
-                textAlign:
-                    TextAlign.center,
-                style: TextStyle(
-                  fontSize: 23,
-                  fontWeight:
-                      FontWeight.bold,
-                ),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold),
               ),
 
               // ==================================================
               // CONTENT
               // ==================================================
-
-              content:
-                  SingleChildScrollView(
+              content: SingleChildScrollView(
                 child: SizedBox(
-                  width:
-                      MediaQuery.of(
-                            dialogContext,
-                          ).size.width *
-                          0.9,
+                  width: MediaQuery.of(dialogContext).size.width * 0.9,
 
                   child: Column(
-                    mainAxisSize:
-                        MainAxisSize.min,
+                    mainAxisSize: MainAxisSize.min,
 
                     children: [
                       // ==================================================
                       // CUSTOMER AUTOCOMPLETE
                       // ==================================================
-
                       Autocomplete<String>(
-                        optionsBuilder:
-                            (
-                          TextEditingValue
-                              textEditingValue,
-                        ) {
-                          final keyword =
-                              textEditingValue
-                                  .text
-                                  .trim()
-                                  .toLowerCase();
+                        optionsBuilder: (TextEditingValue textEditingValue) {
+                          final keyword = textEditingValue.text
+                              .trim()
+                              .toLowerCase();
 
-                          if (keyword
-                              .isEmpty) {
-                            return const Iterable<
-                                String>.empty();
+                          if (keyword.isEmpty) {
+                            return const Iterable<String>.empty();
                           }
 
-                          return customerNames
-                              .where(
-                            (name) =>
-                                name
-                                    .toLowerCase()
-                                    .contains(
-                                      keyword,
-                                    ),
+                          return customerNames.where(
+                            (name) => name.toLowerCase().contains(keyword),
                           );
                         },
 
-                        onSelected:
-                            (String name) {
-                          loadCustomerData(
-                            name,
-                          );
+                        onSelected: (String name) {
+                          loadCustomerData(name);
                         },
 
                         fieldViewBuilder:
-                            (
-                          context,
-                          controller,
-                          focusNode,
-                          onFieldSubmitted,
-                        ) {
-                          return TextField(
-                            controller:
-                                controller,
+                            (context, controller, focusNode, onFieldSubmitted) {
+                              return TextField(
+                                controller: controller,
 
-                            focusNode:
-                                focusNode,
+                                focusNode: focusNode,
 
-                            decoration:
-                                InputDecoration(
-                              labelText:
-                                  'اسم الزبون',
+                                decoration: InputDecoration(
+                                  labelText: 'اسم الزبون',
 
-                              hintText:
-                                  'اكتب اسم الزبون',
+                                  hintText: 'اكتب اسم الزبون',
 
-                              prefixIcon:
-                                  const Icon(
-                                Icons.person,
-                              ),
+                                  prefixIcon: const Icon(Icons.person),
 
-                              border:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  12,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
-                              ),
-                            ),
 
-                            onChanged:
-                                (value) {
-                              final typedName =
-                                  value.trim();
+                                onChanged: (value) {
+                                  final typedName = value.trim();
 
-                              final exact =
-                                  customerNames
-                                      .where(
-                                (name) =>
-                                    name
-                                        .trim()
-                                        .toLowerCase() ==
-                                    typedName
-                                        .toLowerCase(),
+                                  final exact = customerNames.where(
+                                    (name) =>
+                                        name.trim().toLowerCase() ==
+                                        typedName.toLowerCase(),
+                                  );
+
+                                  if (exact.isNotEmpty) {
+                                    loadCustomerData(exact.first);
+                                  } else {
+                                    setDialogState(() {
+                                      selectedCustomer = '';
+
+                                      totalDebt = 0.0;
+
+                                      paidAmount = 0.0;
+
+                                      remainingDebt = 0.0;
+                                    });
+                                  }
+                                },
                               );
-
-                              if (exact
-                                  .isNotEmpty) {
-                                loadCustomerData(
-                                  exact.first,
-                                );
-                              } else {
-                                setDialogState(
-                                  () {
-                                    selectedCustomer =
-                                        '';
-
-                                    totalDebt =
-                                        0.0;
-
-                                    paidAmount =
-                                        0.0;
-
-                                    remainingDebt =
-                                        0.0;
-                                  },
-                                );
-                              }
                             },
-                          );
-                        },
                       ),
 
-                      const SizedBox(
-                        height: 20,
-                      ),
+                      const SizedBox(height: 20),
 
                       // ==================================================
                       // LOADING CUSTOMER
                       // ==================================================
-
                       if (loadingCustomer)
                         const Padding(
-                          padding:
-                              EdgeInsets.all(
-                            10,
-                          ),
-                          child:
-                              CircularProgressIndicator(),
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(),
                         ),
 
                       // ==================================================
                       // DEBT DATA
                       // ==================================================
-
-                      if (!loadingCustomer &&
-                          selectedCustomer
-                              .isNotEmpty)
+                      if (!loadingCustomer && selectedCustomer.isNotEmpty)
                         Container(
-                          width:
-                              double.infinity,
+                          width: double.infinity,
 
-                          padding:
-                              const EdgeInsets.all(
-                            15,
-                          ),
+                          padding: const EdgeInsets.all(15),
 
-                          decoration:
-                              BoxDecoration(
-                            color:
-                                Colors.grey.shade100,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
 
-                            borderRadius:
-                                BorderRadius.circular(
-                              15,
-                            ),
+                            borderRadius: BorderRadius.circular(15),
 
-                            border:
-                                Border.all(
-                              color:
-                                  Colors.grey.shade300,
-                            ),
+                            border: Border.all(color: Colors.grey.shade300),
                           ),
 
                           child: Column(
@@ -730,60 +550,42 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                               // ==================================================
                               // TOTAL DEBT
                               // ==================================================
-
                               _debtRow(
-                                title:
-                                    'إجمالي الدين',
+                                title: 'إجمالي الدين',
 
-                                value:
-                                    totalDebt,
+                                value: totalDebt,
 
-                                color:
-                                    Colors.red,
+                                color: Colors.red,
                               ),
 
-                              const SizedBox(
-                                height: 12,
-                              ),
+                              const SizedBox(height: 12),
 
                               // ==================================================
                               // PAID
                               // ==================================================
-
                               _debtRow(
-                                title:
-                                    'المبلغ المسدد',
+                                title: 'المبلغ المسدد',
 
-                                value:
-                                    paidAmount,
+                                value: paidAmount,
 
-                                color:
-                                    Colors.green,
+                                color: Colors.green,
                               ),
 
-                              const SizedBox(
-                                height: 12,
-                              ),
+                              const SizedBox(height: 12),
 
                               const Divider(),
 
-                              const SizedBox(
-                                height: 8,
-                              ),
+                              const SizedBox(height: 8),
 
                               // ==================================================
                               // REMAINING
                               // ==================================================
-
                               _debtRow(
-                                title:
-                                    'المبلغ المتبقي',
+                                title: 'المبلغ المتبقي',
 
-                                value:
-                                    remainingDebt,
+                                value: remainingDebt,
 
-                                color:
-                                    Colors.blue,
+                                color: Colors.blue,
 
                                 big: true,
                               ),
@@ -791,114 +593,82 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                           ),
                         ),
 
-                      const SizedBox(
-                        height: 20,
-                      ),
+                      const SizedBox(height: 20),
 
                       // ==================================================
                       // PAYMENT AMOUNT
                       // ==================================================
-
                       TextField(
-                        controller:
-                            amountController,
+                        controller: amountController,
 
-                        enabled:
-                            !savingPayment,
+                        enabled: !savingPayment,
 
-                        keyboardType:
-                            const TextInputType
-                                .numberWithOptions(
+                        keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),
 
-                        decoration:
-                            InputDecoration(
-                          labelText:
-                              'المبلغ المسدد',
+                        decoration: InputDecoration(
+                          labelText: 'المبلغ المسدد',
 
-                          hintText:
-                              'أدخل مبلغ التسديد',
+                          hintText: 'أدخل مبلغ التسديد',
 
-                          prefixIcon:
-                              const Icon(
-                            Icons.payments,
+                          prefixIcon: Column(
+                            children: [
+                              const Icon(Icons.payments),
+                              SizedBox(height: 2),
+                              Text(
+                                " تسديد",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 7,
+                                ),
+                              ),
+                            ],
                           ),
 
-                          suffixText:
-                              'د.ع',
+                          suffixText: 'د.ع',
 
-                          border:
-                              OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius
-                                    .circular(
-                              12,
-                            ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
 
-                      const SizedBox(
-                        height: 15,
-                      ),
+                      const SizedBox(height: 15),
 
                       // ==================================================
                       // DATE
                       // ==================================================
-
                       Container(
-                        width:
-                            double.infinity,
+                        width: double.infinity,
 
-                        padding:
-                            const EdgeInsets.all(
-                          14,
-                        ),
+                        padding: const EdgeInsets.all(14),
 
-                        decoration:
-                            BoxDecoration(
-                          color:
-                              Colors.grey.shade100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
 
-                          borderRadius:
-                              BorderRadius.circular(
-                            12,
-                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
 
                         child: Row(
                           children: [
                             const Icon(
-                              Icons
-                                  .calendar_today,
-                              color:
-                                  Colors.grey,
+                              Icons.calendar_today,
+                              color: Colors.grey,
                             ),
 
-                            const SizedBox(
-                              width: 10,
-                            ),
+                            const SizedBox(width: 10),
 
                             Text(
-                              _formatDate(
-                                DateTime.now(),
-                              ),
-                              style:
-                                  const TextStyle(
-                                fontSize: 16,
-                              ),
+                              _formatDate(DateTime.now()),
+                              style: const TextStyle(fontSize: 16),
                             ),
 
                             const Spacer(),
 
                             const Text(
                               'تاريخ التسديد',
-                              style:
-                                  TextStyle(
-                                color:
-                                    Colors.grey,
-                              ),
+                              style: TextStyle(color: Colors.grey),
                             ),
                           ],
                         ),
@@ -911,63 +681,41 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
               // ==================================================
               // ACTIONS
               // ==================================================
-
-              actionsAlignment:
-                  MainAxisAlignment.center,
+              actionsAlignment: MainAxisAlignment.center,
 
               actions: [
                 // ==================================================
                 // CANCEL
                 // ==================================================
-
                 TextButton(
-                  onPressed:
-                      savingPayment
-                          ? null
-                          : () {
-                              Navigator.of(
-                                dialogContext,
-                              ).pop();
-                            },
+                  onPressed: savingPayment
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
 
                   child: const Text(
                     'إلغاء',
-                    style: TextStyle(
-                      color: Colors.grey,
-                    ),
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ),
 
                 // ==================================================
                 // SAVE
                 // ==================================================
-
                 ElevatedButton.icon(
-                  onPressed:
-                      savingPayment
-                          ? null
-                          : savePayment,
+                  onPressed: savingPayment ? null : savePayment,
 
-                  style:
-                      ElevatedButton.styleFrom(
-                    backgroundColor:
-                        const Color(
-                      0xFF011236,
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF011236),
 
-                    padding:
-                        const EdgeInsets
-                            .symmetric(
+                    padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,
                     ),
 
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(
-                        10,
-                      ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
 
@@ -975,29 +723,17 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child:
-                              CircularProgressIndicator(
+                          child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color:
-                                Colors.white,
+                            color: Colors.white,
                           ),
                         )
-                      : const Icon(
-                          Icons.check,
-                          color:
-                              Colors.white,
-                        ),
+                      : const Icon(Icons.check, color: Colors.white),
 
                   label: Text(
-                    savingPayment
-                        ? 'جارٍ الحفظ...'
-                        : 'تسديد',
+                    savingPayment ? 'جارٍ الحفظ...' : 'تسديد',
 
-                    style:
-                        const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ),
               ],
@@ -1019,27 +755,22 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
     bool big = false,
   }) {
     return Row(
-      mainAxisAlignment:
-          MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           title,
           style: TextStyle(
-            fontSize:
-                big ? 17 : 16,
-            fontWeight:
-                FontWeight.bold,
+            fontSize: big ? 17 : 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
 
         Text(
           '${value.toStringAsFixed(0)} د.ع',
           style: TextStyle(
-            fontSize:
-                big ? 20 : 17,
+            fontSize: big ? 20 : 17,
             color: color,
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],
@@ -1050,35 +781,16 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
   // FORMAT DATE
   // ============================================================
 
-  String _formatDate(
-    DateTime date,
-  ) {
-    final day =
-        date.day.toString().padLeft(
-              2,
-              '0',
-            );
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
 
-    final month =
-        date.month.toString().padLeft(
-              2,
-              '0',
-            );
+    final month = date.month.toString().padLeft(2, '0');
 
-    final year =
-        date.year.toString();
+    final year = date.year.toString();
 
-    final hour =
-        date.hour.toString().padLeft(
-              2,
-              '0',
-            );
+    final hour = date.hour.toString().padLeft(2, '0');
 
-    final minute =
-        date.minute.toString().padLeft(
-              2,
-              '0',
-            );
+    final minute = date.minute.toString().padLeft(2, '0');
 
     return '$year/$month/$day  $hour:$minute';
   }
@@ -1088,22 +800,17 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
   // ============================================================
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     final groups = groupedDebts;
 
     return Scaffold(
-      backgroundColor:
-          const Color(0xFF011236),
+      backgroundColor: const Color(0xFF011236),
 
       // ==========================================================
       // APP BAR
       // ==========================================================
-
       appBar: AppBar(
-        backgroundColor:
-            const Color(0xFF011236),
+        backgroundColor: const Color(0xFF011236),
 
         elevation: 0,
 
@@ -1114,8 +821,7 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
           style: TextStyle(
             color: Colors.white,
             fontSize: 26,
-            fontWeight:
-                FontWeight.bold,
+            fontWeight: FontWeight.bold,
           ),
         ),
 
@@ -1123,13 +829,21 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
           IconButton(
             tooltip: 'تسديد دين',
 
-            icon: const Icon(
-              Icons.payments,
-              color: Colors.white,
+            icon: Column(
+              children: [
+                const Icon(Icons.payments, color: Colors.white),
+                const SizedBox(height: 2),
+                Text(
+                  'تسديد',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
             ),
 
-            onPressed:
-                showDebtPaymentDialog,
+            onPressed: showDebtPaymentDialog,
           ),
         ],
       ),
@@ -1137,20 +851,15 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
       // ==========================================================
       // BODY
       // ==========================================================
-
       body: Container(
         width: double.infinity,
 
-        decoration:
-            const BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
 
-          borderRadius:
-              BorderRadius.only(
-            topLeft:
-                Radius.circular(40),
-            topRight:
-                Radius.circular(40),
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(40),
+            topRight: Radius.circular(40),
           ),
         ),
 
@@ -1159,59 +868,33 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
             // ====================================================
             // SEARCH
             // ====================================================
-
             Padding(
-              padding:
-                  const EdgeInsets.all(
-                15,
-              ),
+              padding: const EdgeInsets.all(15),
 
               child: TextField(
-                controller:
-                    searchController,
+                controller: searchController,
 
-                onChanged:
-                    searchCustomer,
+                onChanged: searchCustomer,
 
-                decoration:
-                    InputDecoration(
-                  hintText:
-                      'ابحث باسم الزبون',
+                decoration: InputDecoration(
+                  hintText: 'ابحث باسم الزبون',
 
-                  prefixIcon:
-                      const Icon(
-                    Icons.search,
-                  ),
+                  prefixIcon: const Icon(Icons.search),
 
-                  suffixIcon:
-                      searchController
-                              .text
-                              .isNotEmpty
-                          ? IconButton(
-                              icon:
-                                  const Icon(
-                                Icons.clear,
-                              ),
+                  suffixIcon: searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
 
-                              onPressed:
-                                  () {
-                                searchController
-                                    .clear();
+                          onPressed: () {
+                            searchController.clear();
 
-                                searchCustomer(
-                                  '',
-                                );
-                              },
-                            )
-                          : null,
+                            searchCustomer('');
+                          },
+                        )
+                      : null,
 
-                  border:
-                      OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius
-                            .circular(
-                      15,
-                    ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
@@ -1220,197 +903,120 @@ class _DebtHistoryScreenState extends State<DebtHistoryScreen> {
             // ====================================================
             // LIST
             // ====================================================
-
             Expanded(
               child: isLoading
-                  ? const Center(
-                      child:
-                          CircularProgressIndicator(),
-                    )
+                  ? const Center(child: CircularProgressIndicator())
                   : groups.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'لا توجد ديون',
-                            style:
-                                TextStyle(
-                              fontSize: 20,
-                              color:
-                                  Colors.grey,
+                  ? const Center(
+                      child: Text(
+                        'لا توجد ديون',
+                        style: TextStyle(fontSize: 20, color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 15,
+                        vertical: 5,
+                      ),
+
+                      itemCount: groups.length,
+
+                      itemBuilder: (context, index) {
+                        final customerName = groups.keys.elementAt(index);
+
+                        final invoices = groups[customerName]!;
+
+                        final total = customerTotal(invoices);
+
+                        return Card(
+                          elevation: 4,
+
+                          margin: const EdgeInsets.only(bottom: 15),
+
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+
+                          child: ExpansionTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Colors.blue,
+
+                              child: Icon(Icons.person, color: Colors.white),
                             ),
+
+                            title: Text(
+                              customerName,
+
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            subtitle: Text(
+                              '${invoices.length} قائمة'
+                              '  •  '
+                              'المجموع: '
+                              '${total.toStringAsFixed(0)} د.ع',
+                            ),
+
+                            children: [
+                              const Divider(height: 1),
+
+                              ...invoices.map((invoice) {
+                                return ListTile(
+                                  leading: const Icon(
+                                    Icons.receipt_long,
+                                    color: Colors.blue,
+                                  ),
+
+                                  title: Text(
+                                    'قائمة رقم ${invoice.id}',
+
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  subtitle: Text('التاريخ: ${invoice.date}'),
+
+                                  trailing: Text(
+                                    '${invoice.total.toStringAsFixed(0)} د.ع',
+
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  onTap: () async {
+                                    await Navigator.push(
+                                      context,
+
+                                      MaterialPageRoute(
+                                        builder: (_) => InvoiceDetailsScreen(
+                                          invoice: invoice,
+                                        ),
+                                      ),
+                                    );
+
+                                    if (!mounted) {
+                                      return;
+                                    }
+
+                                    await loadHistory();
+                                  },
+                                );
+                              }),
+
+                              const SizedBox(height: 10),
+                            ],
                           ),
-                        )
-                      : ListView.builder(
-                          padding:
-                              const EdgeInsets
-                                  .symmetric(
-                            horizontal: 15,
-                            vertical: 5,
-                          ),
-
-                          itemCount:
-                              groups.length,
-
-                          itemBuilder:
-                              (
-                            context,
-                            index,
-                          ) {
-                            final customerName =
-                                groups.keys
-                                    .elementAt(
-                              index,
-                            );
-
-                            final invoices =
-                                groups[
-                                    customerName]!;
-
-                            final total =
-                                customerTotal(
-                              invoices,
-                            );
-
-                            return Card(
-                              elevation: 4,
-
-                              margin:
-                                  const EdgeInsets
-                                      .only(
-                                bottom: 15,
-                              ),
-
-                              shape:
-                                  RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  18,
-                                ),
-                              ),
-
-                              child:
-                                  ExpansionTile(
-                                leading:
-                                    const CircleAvatar(
-                                  backgroundColor:
-                                      Colors.blue,
-
-                                  child:
-                                      Icon(
-                                    Icons.person,
-                                    color: Colors
-                                        .white,
-                                  ),
-                                ),
-
-                                title:
-                                    Text(
-                                  customerName,
-
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.blue,
-                                    fontSize:
-                                        19,
-                                    fontWeight:
-                                        FontWeight
-                                            .bold,
-                                  ),
-                                ),
-
-                                subtitle:
-                                    Text(
-                                  '${invoices.length} قائمة'
-                                  '  •  '
-                                  'المجموع: '
-                                  '${total.toStringAsFixed(0)} د.ع',
-                                ),
-
-                                children: [
-                                  const Divider(
-                                    height: 1,
-                                  ),
-
-                                  ...invoices.map(
-                                    (
-                                      invoice,
-                                    ) {
-                                      return ListTile(
-                                        leading:
-                                            const Icon(
-                                          Icons
-                                              .receipt_long,
-                                          color:
-                                              Colors.blue,
-                                        ),
-
-                                        title:
-                                            Text(
-                                          'قائمة رقم ${invoice.id}',
-
-                                          style:
-                                              const TextStyle(
-                                            fontWeight:
-                                                FontWeight
-                                                    .bold,
-                                          ),
-                                        ),
-
-                                        subtitle:
-                                            Text(
-                                          'التاريخ: ${invoice.date}',
-                                        ),
-
-                                        trailing:
-                                            Text(
-                                          '${invoice.total.toStringAsFixed(0)} د.ع',
-
-                                          style:
-                                              const TextStyle(
-                                            color:
-                                                Colors.blue,
-
-                                            fontWeight:
-                                                FontWeight
-                                                    .bold,
-                                          ),
-                                        ),
-
-                                        onTap:
-                                            () async {
-                                          await Navigator
-                                              .push(
-                                            context,
-
-                                            MaterialPageRoute(
-                                              builder:
-                                                  (_) =>
-                                                      InvoiceDetailsScreen(
-                                                invoice:
-                                                    invoice,
-                                              ),
-                                            ),
-                                          );
-
-                                          if (!mounted) {
-                                            return;
-                                          }
-
-                                          await loadHistory();
-                                        },
-                                      );
-                                    },
-                                  ),
-
-                                  const SizedBox(
-                                    height: 10,
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

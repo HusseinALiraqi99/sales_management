@@ -931,4 +931,74 @@ Future<double> getCustomerRemainingDebt(
 
   return remaining;
 }
+Future<void> convertCustomerDebtToCash(
+  String customerName,
+) async {
+  final db = await database;
+
+  final debtResult = await db.rawQuery(
+    '''
+    SELECT COALESCE(SUM(total), 0) AS total
+    FROM invoices
+    WHERE TRIM(customerName) = ?
+    AND paymentType = ?
+    ''',
+    [
+      customerName.trim(),
+      'آجل',
+    ],
+  );
+
+  final paidResult = await db.rawQuery(
+    '''
+    SELECT COALESCE(SUM(amount), 0) AS total
+    FROM debt_payments
+    WHERE TRIM(customerName) = ?
+    ''',
+    [
+      customerName.trim(),
+    ],
+  );
+
+  final totalDebt =
+      (debtResult.first['total'] as num?)
+              ?.toDouble() ??
+          0.0;
+
+  final totalPaid =
+      (paidResult.first['total'] as num?)
+              ?.toDouble() ??
+          0.0;
+
+  // إذا تم تسديد كامل الدين
+  if (totalPaid >= totalDebt && totalDebt > 0) {
+    await db.update(
+      'invoices',
+      {
+        'paymentType': 'نقدي',
+      },
+      where:
+          'TRIM(customerName) = ? AND paymentType = ?',
+      whereArgs: [
+        customerName.trim(),
+        'آجل',
+      ],
+    );
+  }
+}
+Future<List<String>> getCustomerNames() async {
+  final db = await database;
+
+  final result = await db.rawQuery('''
+    SELECT DISTINCT TRIM(customerName) AS customerName
+    FROM invoices
+    WHERE customerName IS NOT NULL
+    AND TRIM(customerName) != ''
+    ORDER BY customerName ASC
+  ''');
+
+  return result
+      .map((row) => row['customerName'].toString())
+      .toList();
+}
 }

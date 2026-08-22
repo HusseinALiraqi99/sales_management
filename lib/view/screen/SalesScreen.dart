@@ -6,6 +6,9 @@ import 'package:sales_management/models/product_model.dart';
 import 'package:sales_management/models/sale_model.dart';
 import 'package:sales_management/view/screen/menus_screen.dart';
 
+List<String> customerNames = [];
+
+
 class SalesScreen extends StatefulWidget {
   final ProductModel? scannedProduct;
 
@@ -37,12 +40,23 @@ class _SalesScreenState extends State<SalesScreen> {
   @override
   void initState() {
     super.initState();
+    loadCustomerNames();
     loadProducts().then((_) {
       if (widget.scannedProduct != null) {
         addToCart(widget.scannedProduct!);
       }
     });
   }
+  Future<void> loadCustomerNames() async {
+  final names =
+      await DatabaseHelper.instance.getDebtCustomerNames();
+
+  if (!mounted) return;
+
+  setState(() {
+    customerNames = names;
+  });
+}
 
   Future<void> loadProducts() async {
     products = await DatabaseHelper.instance.getProducts();
@@ -108,310 +122,393 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> completeSale() async {
-  if (cart.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("لا توجد منتجات في السلة"),
-      ),
-    );
-    return;
-  }
-
-  final customerController =
-      TextEditingController(text: "نقدي");
-
-  final notesController =
-      TextEditingController();
-
-  String paymentType = "نقدي";
-
-  final now = DateTime.now();
-
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: const Text(
-              "تأكيد البيع",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-
-                  // اسم الزبون
-                  TextField(
-                    controller: customerController,
-                    decoration: InputDecoration(
-                      labelText: "اسم الزبون",
-                      prefixIcon:
-                          const Icon(Icons.person),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // التاريخ
-                  InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: "التاريخ",
-                      prefixIcon:
-                          const Icon(Icons.calendar_today),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} "
-                      "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}",
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // طريقة الدفع
-                  DropdownButtonFormField<String>(
-                    value: paymentType,
-                    decoration: InputDecoration(
-                      labelText: "طريقة الدفع",
-                      prefixIcon:
-                          const Icon(Icons.payment),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                      ),
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "نقدي",
-                        child: Text("نقدي"),
-                      ),
-                     
-                      DropdownMenuItem(
-                        value: "آجل",
-                        child: Text("آجل"),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() {
-                          paymentType = value;
-                        });
-                      }
-                    },
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // الملاحظات
-                  TextField(
-                    controller: notesController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      labelText: "ملاحظات",
-                      prefixIcon:
-                          const Icon(Icons.note),
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // الإجمالي
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "الإجمالي:",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "${totalPrice.toStringAsFixed(0)} د.ع",
-                        style: const TextStyle(
-                          fontSize: 20,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(
-                    dialogContext,
-                    false,
-                  );
-                },
-                child: const Text("إلغاء"),
-              ),
-
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      const Color(0xFF011236),
-                ),
-                onPressed: () {
-                  Navigator.pop(
-                    dialogContext,
-                    true,
-                  );
-                },
-                child: const Text(
-                  "تأكيد البيع",
-                  style: TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
-
-  // إذا ألغى المستخدم
-  if (confirmed != true) {
-    customerController.dispose();
-    notesController.dispose();
-    return;
-  }
-
-  try {
-
-    // =========================
-    // إنشاء الفاتورة
-    // =========================
-
-    final invoice = InvoiceModel(
-      customerName:
-          customerController.text.trim().isEmpty
-              ? "نقدي"
-              : customerController.text.trim(),
-
-      date: now.toString(),
-
-      total: totalPrice,
-
-      paymentType: paymentType,
-
-      notes: notesController.text.trim(),
-    );
-
-    // حفظ الفاتورة والحصول على ID
-    final invoiceId =
-        await DatabaseHelper.instance
-            .insertInvoice(invoice);
-
-    // =========================
-    // حفظ المنتجات
-    // =========================
-
-    for (var item in cart) {
-
-      final sale = SaleModel(
-        invoiceId: invoiceId,
-
-        productId: item.product.id!,
-
-        productName: item.product.name,
-
-        barcode: item.product.barcode,
-
-        price: item.product.sellPrice,
-
-        quantity: item.quantity,
-
-        total: item.totalPrice,
-
-        saleDate: now.toString(),
-      );
-
-      await DatabaseHelper.instance
-          .insertSale(sale);
-
-      // تحديث كمية المخزن
-      final remainingQuantity =
-          item.product.quantity -
-          item.quantity;
-
-      await DatabaseHelper.instance
-          .updateProductQuantity(
-        item.product.id!,
-        remainingQuantity,
-      );
+    if (cart.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("لا توجد منتجات في السلة")));
+      return;
     }
 
-    // تنظيف السلة
-    cart.clear();
+    final customerController = TextEditingController(text: "نقدي");
 
-    totalPrice = 0;
+    final notesController = TextEditingController();
 
-    customerController.dispose();
-    notesController.dispose();
+    String paymentType = "نقدي";
 
-    if (!mounted) return;
+    final now = DateTime.now();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Colors.green,
-        content: Text(
-          "تم حفظ الفاتورة وإتمام البيع بنجاح",
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog.fullscreen(
+              child: Scaffold(
+                backgroundColor: Colors.white,
+                appBar: AppBar(
+                  backgroundColor: const Color(0xFF011236),
+                  elevation: 0,
+                  title: const Text(
+                    "تأكيد البيع",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  leading: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                  ),
+                ),
+                body: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // اسم الزبون
+                          Autocomplete<String>(
+                            optionsBuilder:
+                                (TextEditingValue textEditingValue) {
+                                  final keyword = textEditingValue.text
+                                      .trim()
+                                      .toLowerCase();
+
+                                  if (keyword.isEmpty) {
+                                    return const Iterable<String>.empty();
+                                  }
+
+                                  return customerNames.where(
+                                    (name) =>
+                                        name.toLowerCase().contains(keyword),
+                                  );
+                                },
+
+                            onSelected: (String name) {
+                              customerController.text = name;
+                            },
+
+                            fieldViewBuilder:
+                                (
+                                  BuildContext context,
+                                  TextEditingController fieldController,
+                                  FocusNode focusNode,
+                                  VoidCallback onFieldSubmitted,
+                                ) {
+                                  // مزامنة Controller الخاص بالـ Autocomplete
+                                  // مع customerController الموجود عندك
+                                  if (fieldController.text !=
+                                      customerController.text) {
+                                    fieldController.text =
+                                        customerController.text;
+                                    fieldController.selection =
+                                        TextSelection.fromPosition(
+                                          TextPosition(
+                                            offset: fieldController.text.length,
+                                          ),
+                                        );
+                                  }
+
+                                  return TextField(
+                                    controller: fieldController,
+                                    focusNode: focusNode,
+                                    decoration: InputDecoration(
+                                      labelText: "اسم الزبون",
+                                      hintText: "اكتب اسم الزبون",
+                                      prefixIcon: const Icon(Icons.person),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  );
+                                },
+
+                            optionsViewBuilder:
+                                (
+                                  BuildContext context,
+                                  AutocompleteOnSelected<String> onSelected,
+                                  Iterable<String> options,
+                                ) {
+                                  return Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Material(
+                                      elevation: 6,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxHeight: 220,
+                                        ),
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.zero,
+                                          shrinkWrap: true,
+                                          itemCount: options.length,
+                                          itemBuilder: (context, index) {
+                                            final name = options.elementAt(
+                                              index,
+                                            );
+
+                                            return ListTile(
+                                              leading: const CircleAvatar(
+                                                child: Icon(Icons.person),
+                                              ),
+                                              title: Text(
+                                                name,
+                                                textAlign: TextAlign.right,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              onTap: () {
+                                                onSelected(name);
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          // التاريخ
+                          InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: "التاريخ",
+                              prefixIcon: const Icon(Icons.calendar_today),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')} "
+                              "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}",
+                            ),
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          // طريقة الدفع
+                          DropdownButtonFormField<String>(
+                            value: paymentType,
+                            decoration: InputDecoration(
+                              labelText: "طريقة الدفع",
+                              prefixIcon: const Icon(Icons.payment),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items: const [
+                              DropdownMenuItem(
+                                value: "نقدي",
+                                child: Text("نقدي"),
+                              ),
+                              DropdownMenuItem(
+                                value: "آجل",
+                                child: Text("آجل"),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setDialogState(() {
+                                  paymentType = value;
+                                });
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          // الملاحظات
+                          TextField(
+                            controller: notesController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: "ملاحظات",
+                              prefixIcon: const Icon(Icons.note),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // الإجمالي
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F7FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "الإجمالي:",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  "${totalPrice.toStringAsFixed(0)} د.ع",
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, false),
+                                  child: const Text("إلغاء"),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF011236),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, true),
+                                  child: const Text(
+                                    "تأكيد البيع",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // إذا ألغى المستخدم
+    if (confirmed != true) {
+      customerController.dispose();
+      notesController.dispose();
+      return;
+    }
+
+    try {
+      // =========================
+      // إنشاء الفاتورة
+      // =========================
+
+      final invoice = InvoiceModel(
+        customerName: customerController.text.trim().isEmpty
+            ? "نقدي"
+            : customerController.text.trim(),
+
+        date: now.toString(),
+
+        total: totalPrice,
+
+        paymentType: paymentType,
+
+        notes: notesController.text.trim(),
+      );
+
+      // حفظ الفاتورة والحصول على ID
+      final invoiceId = await DatabaseHelper.instance.insertInvoice(invoice);
+
+      // =========================
+      // حفظ المنتجات
+      // =========================
+
+      for (var item in cart) {
+        final sale = SaleModel(
+          invoiceId: invoiceId,
+
+          productId: item.product.id!,
+
+          productName: item.product.name,
+
+          barcode: item.product.barcode,
+
+          price: item.product.sellPrice,
+
+          quantity: item.quantity,
+
+          total: item.totalPrice,
+
+          saleDate: now.toString(),
+        );
+
+        await DatabaseHelper.instance.insertSale(sale);
+
+        // تحديث كمية المخزن
+        final remainingQuantity = item.product.quantity - item.quantity;
+
+        await DatabaseHelper.instance.updateProductQuantity(
+          item.product.id!,
+          remainingQuantity,
+        );
+      }
+
+      // تنظيف السلة
+      cart.clear();
+
+      totalPrice = 0;
+
+      customerController.dispose();
+      notesController.dispose();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.green,
+          content: Text("تم حفظ الفاتورة وإتمام البيع بنجاح"),
         ),
-      ),
-    );
+      );
 
-    // الانتقال إلى القوائم
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const MenusScreen(),
-      ),
-    );
+      // الانتقال إلى القوائم
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MenusScreen()),
+      );
+    } catch (e) {
+      debugPrint("ERROR: $e");
 
-  } catch (e) {
+      customerController.dispose();
+      notesController.dispose();
 
-    debugPrint("ERROR: $e");
+      if (!mounted) return;
 
-    customerController.dispose();
-    notesController.dispose();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: Colors.red,
-        content: Text(
-          "حدث خطأ: $e",
-        ),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(backgroundColor: Colors.red, content: Text("حدث خطأ: $e")),
+      );
+    }
   }
-}
 
   void showCart() {
     showModalBottomSheet(
@@ -558,7 +655,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 55,
-                      
+
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF011236),
@@ -570,7 +667,14 @@ class _SalesScreenState extends State<SalesScreen> {
                           Navigator.pop(context);
                           await completeSale();
                         },
-                        child: const Text("إتمام البيع",style:TextStyle(color:Colors.white,fontSize:18,fontWeight:FontWeight.bold),),
+                        child: const Text(
+                          "إتمام البيع",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -730,9 +834,6 @@ class _SalesScreenState extends State<SalesScreen> {
                       },
                     ),
             ),
-       
-
-        
           ],
         ),
       ),
