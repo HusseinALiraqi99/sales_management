@@ -37,7 +37,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -100,6 +100,16 @@ class DatabaseHelper {
         paymentDate TEXT NOT NULL
       )
     ''');
+
+// LICENSE
+await db.execute('''
+  CREATE TABLE license(
+    id INTEGER PRIMARY KEY,
+    trialStart TEXT NOT NULL,
+    isActivated INTEGER NOT NULL DEFAULT 0,
+    activatedAt TEXT
+  )
+''');
   }
 
   // ============================================================
@@ -140,6 +150,17 @@ class DatabaseHelper {
         )
       ''');
     }
+    // VERSION 5
+if (oldVersion < 5) {
+  await db.execute('''
+    CREATE TABLE IF NOT EXISTS license(
+      id INTEGER PRIMARY KEY,
+      trialStart TEXT NOT NULL,
+      isActivated INTEGER NOT NULL DEFAULT 0,
+      activatedAt TEXT
+    )
+  ''');
+}
   }
 
   // ============================================================

@@ -151,24 +151,33 @@ class _MenusScreenState extends State<MenusScreen> {
             // قائمة الفواتير
             // =========================
             Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : filteredInvoices.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "لا توجد قوائم",
-                        style: TextStyle(fontSize: 20),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(15),
+  child: isLoading
+      ? const Center(
+          child: CircularProgressIndicator(),
+        )
+      : filteredInvoices.isEmpty
+          ? const Center(
+              child: Text(
+                "لا توجد قوائم",
+                style: TextStyle(fontSize: 20),
+              ),
+            )
+          : RefreshIndicator(
+              color: const Color(0xFF011236),
+              backgroundColor: Colors.white,
+              onRefresh: loadInvoices,
 
-                      itemCount: filteredInvoices.length,
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(15),
 
-                      itemBuilder: (context, index) {
-                        final invoice = filteredInvoices[index];
+                itemCount: filteredInvoices.length,
 
-                        return Card(
+                itemBuilder: (context, index) {
+                  final invoice = filteredInvoices[index];
+
+                  return Card(
+                  
                           elevation: 3,
 
                           margin: const EdgeInsets.only(bottom: 10),
@@ -390,10 +399,12 @@ class _MenusScreenState extends State<MenusScreen> {
                               );
                             },
                           ),
-                        );
-                      },
-                    ),
+                        
+                  );
+                },
+              ),
             ),
+),
           ],
         ),
       ),
@@ -423,115 +434,145 @@ class _MenusScreenState extends State<MenusScreen> {
       // =========================
       // Bottom Navigation
       // =========================
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
+      // =========================
+      // Bottom Navigation
+      // =========================
+      // =========================
+      // Bottom Navigation
+      // =========================
+      bottomNavigationBar: Container(
+        margin: const EdgeInsets.fromLTRB(10, 0, 10, 10), // هامش خارجي لجعل الشريط طافياً ومقوساً
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(30), // حواف دائرية انسيابية
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF0F2F5).withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(30),
+          child: BottomAppBar(
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8,
+            color: const Color(0xFFF0F2F5), // لون رصاصي ناعم واحترافي
+            elevation: 0,
+            child: SizedBox(
+              height: 65,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // القوائم
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {},
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.grid_view, color: Color(0xFF011236), size: 22),
+                          SizedBox(height: 4),
+                          Text(
+                            "القوائم",
+                            style: TextStyle(
+                              color: Color(0xFF011236),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
-        notchMargin: 8,
+                  // المبيعات
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SalesScreen()),
+                      );
+                      await loadInvoices();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.receipt_long, color: Colors.grey, size: 22),
+                          SizedBox(height: 4),
+                          Text(
+                            "المبيعات",
+                            style: TextStyle(color: Colors.grey, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
-        color: Colors.white,
+                  const SizedBox(width: 40), // مساحة لزر الإضافة المنتصف
 
-        child: SizedBox(
-          height: 65,
+                  // المخزن
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const InventoryScreen()),
+                      );
+                      await loadInvoices();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            color: Colors.grey,
+                            size: 22,
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "المخزن",
+                            style: TextStyle(color: Colors.grey, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-
-            children: [
-              // القوائم
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-
-                children: const [
-                  Icon(Icons.grid_view, color: Color(0xFF011236), size: 22),
-
-                  SizedBox(height: 4),
-
-                  Text(
-                    "القوائم",
-                    style: TextStyle(color: Color(0xFF011236), fontSize: 11),
+                  // التقارير
+                  InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ReportsScreen()),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.bar_chart, color: Colors.grey, size: 22),
+                          SizedBox(height: 4),
+                          Text(
+                            "تقارير",
+                            style: TextStyle(color: Colors.grey, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
-              // المبيعات
-              InkWell(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SalesScreen()),
-                  );
-
-                  await loadInvoices();
-                },
-
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-
-                  children: const [
-                    Icon(Icons.receipt_long, color: Colors.grey, size: 22),
-
-                    SizedBox(height: 4),
-
-                    Text(
-                      "المبيعات",
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 40),
-              // المخزن
-              InkWell(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const InventoryScreen()),
-                  );
-
-                  await loadInvoices();
-                },
-
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-
-                  children: const [
-                    Icon(
-                      Icons.inventory_2_outlined,
-                      color: Colors.grey,
-                      size: 22,
-                    ),
-
-                    SizedBox(height: 4),
-
-                    Text(
-                      "المخزن",
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-
-              // التقارير
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ReportsScreen()),
-                  );
-                },
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.bar_chart, color: Colors.grey, size: 22),
-                    SizedBox(height: 4),
-                    Text(
-                      "تقارير",
-                      style: TextStyle(color: Colors.grey, fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
