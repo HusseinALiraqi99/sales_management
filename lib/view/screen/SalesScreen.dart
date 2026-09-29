@@ -129,8 +129,7 @@ class _SalesScreenState extends State<SalesScreen> {
       return;
     }
 
-    final customerController = TextEditingController(text: "نقدي");
-
+final customerController = TextEditingController();
     final notesController = TextEditingController();
 
     String paymentType = "نقدي";
@@ -169,107 +168,90 @@ class _SalesScreenState extends State<SalesScreen> {
                         children: [
                           // اسم الزبون
                           Autocomplete<String>(
-                            optionsBuilder:
-                                (TextEditingValue textEditingValue) {
-                                  final keyword = textEditingValue.text
-                                      .trim()
-                                      .toLowerCase();
+  optionsBuilder: (TextEditingValue textEditingValue) {
+    final keyword = textEditingValue.text.trim().toLowerCase();
 
-                                  if (keyword.isEmpty) {
-                                    return const Iterable<String>.empty();
-                                  }
+    if (keyword.isEmpty) {
+      return const Iterable<String>.empty();
+    }
 
-                                  return customerNames.where(
-                                    (name) =>
-                                        name.toLowerCase().contains(keyword),
-                                  );
-                                },
+    return customerNames.where(
+      (name) => name.toLowerCase().contains(keyword),
+    );
+  },
 
-                            onSelected: (String name) {
-                              customerController.text = name;
-                            },
+  onSelected: (String name) {
+    customerController.text = name;
+  },
 
-                            fieldViewBuilder:
-                                (
-                                  BuildContext context,
-                                  TextEditingController fieldController,
-                                  FocusNode focusNode,
-                                  VoidCallback onFieldSubmitted,
-                                ) {
-                                  // مزامنة Controller الخاص بالـ Autocomplete
-                                  // مع customerController الموجود عندك
-                                  if (fieldController.text !=
-                                      customerController.text) {
-                                    fieldController.text =
-                                        customerController.text;
-                                    fieldController.selection =
-                                        TextSelection.fromPosition(
-                                          TextPosition(
-                                            offset: fieldController.text.length,
-                                          ),
-                                        );
-                                  }
+  fieldViewBuilder: (
+    BuildContext context,
+    TextEditingController fieldController,
+    FocusNode focusNode,
+    VoidCallback onFieldSubmitted,
+  ) {
+    return TextField(
+      controller: fieldController,
+      focusNode: focusNode,
 
-                                  return TextField(
-                                    controller: fieldController,
-                                    focusNode: focusNode,
-                                    decoration: InputDecoration(
-                                      labelText: "اسم الزبون",
-                                      hintText: "اكتب اسم الزبون",
-                                      prefixIcon: const Icon(Icons.person),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                    ),
-                                  );
-                                },
+      onChanged: (value) {
+        customerController.text = value;
+      },
 
-                            optionsViewBuilder:
-                                (
-                                  BuildContext context,
-                                  AutocompleteOnSelected<String> onSelected,
-                                  Iterable<String> options,
-                                ) {
-                                  return Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Material(
-                                      elevation: 6,
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxHeight: 220,
-                                        ),
-                                        child: ListView.builder(
-                                          padding: EdgeInsets.zero,
-                                          shrinkWrap: true,
-                                          itemCount: options.length,
-                                          itemBuilder: (context, index) {
-                                            final name = options.elementAt(
-                                              index,
-                                            );
+      decoration: InputDecoration(
+        labelText: "اسم الزبون",
+        hintText: "اكتب اسم الزبون",
+        prefixIcon: const Icon(Icons.person),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  },
 
-                                            return ListTile(
-                                              leading: const CircleAvatar(
-                                                child: Icon(Icons.person),
-                                              ),
-                                              title: Text(
-                                                name,
-                                                textAlign: TextAlign.right,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              onTap: () {
-                                                onSelected(name);
-                                              },
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                          ),
+  optionsViewBuilder: (
+    BuildContext context,
+    AutocompleteOnSelected<String> onSelected,
+    Iterable<String> options,
+  ) {
+    return Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        elevation: 6,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxHeight: 220,
+          ),
+          child: ListView.builder(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: options.length,
+            itemBuilder: (context, index) {
+              final name = options.elementAt(index);
+
+              return ListTile(
+                leading: const CircleAvatar(
+                  child: Icon(Icons.person),
+                ),
+                title: Text(
+                  name,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () {
+                  onSelected(name);
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  },
+),
 
                           const SizedBox(height: 15),
 

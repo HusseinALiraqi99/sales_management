@@ -129,4 +129,51 @@ class LicenseService {
 
     return await isTrialActive();
   }
+  static Future<int> getTrialDaysRemaining() async {
+  final db =
+      await DatabaseHelper.instance.database;
+
+  final result = await db.query(
+    'license',
+    where: 'id = ?',
+    whereArgs: [1],
+    limit: 1,
+  );
+
+  if (result.isEmpty) {
+    return trialDays;
+  }
+
+  if (result.first['isActivated'] == 1) {
+    return 0;
+  }
+
+  final trialStartString =
+      result.first['trialStart']?.toString();
+
+  if (trialStartString == null) {
+    return trialDays;
+  }
+
+  final trialStart =
+      DateTime.tryParse(trialStartString);
+
+  if (trialStart == null) {
+    return trialDays;
+  }
+
+  final now = DateTime.now();
+
+  final elapsedDays =
+      now.difference(trialStart).inDays;
+
+  final remainingDays =
+      trialDays - elapsedDays;
+
+  if (remainingDays < 0) {
+    return 0;
+  }
+
+  return remainingDays;
+}
 }

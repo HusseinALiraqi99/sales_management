@@ -390,27 +390,70 @@ if (oldVersion < 5) {
     );
   }
 
-  Future<void> deleteInvoiceWithSales(
-    int invoiceId,
-  ) async {
-    final db = await database;
+Future<void> deleteInvoiceWithSales(
+  int invoiceId,
+) async {
+  final db = await database;
 
-    await db.transaction(
-      (txn) async {
-        await txn.delete(
-          'sales',
-          where: 'invoiceId = ?',
-          whereArgs: [invoiceId],
-        );
+  await db.transaction(
+    (txn) async {
+      // =========================
+      // جلب مبيعات الفاتورة
+      // =========================
 
-        await txn.delete(
-          'invoices',
-          where: 'id = ?',
-          whereArgs: [invoiceId],
+      final sales = await txn.query(
+        'sales',
+        where: 'invoiceId = ?',
+        whereArgs: [invoiceId],
+      );
+
+      // =========================
+      // إرجاع الكميات إلى المخزن
+      // =========================
+
+      for (final sale in sales) {
+        final productId = sale['productId'] as int?;
+        final quantity = sale['quantity'] as int? ?? 0;
+
+        if (productId == null) {
+          continue;
+        }
+
+        await txn.rawUpdate(
+          '''
+          UPDATE products
+          SET quantity = quantity + ?
+          WHERE id = ?
+          ''',
+          [
+            quantity,
+            productId,
+          ],
         );
-      },
-    );
-  }
+      }
+
+      // =========================
+      // حذف مبيعات الفاتورة
+      // =========================
+
+      await txn.delete(
+        'sales',
+        where: 'invoiceId = ?',
+        whereArgs: [invoiceId],
+      );
+
+      // =========================
+      // حذف الفاتورة
+      // =========================
+
+      await txn.delete(
+        'invoices',
+        where: 'id = ?',
+        whereArgs: [invoiceId],
+      );
+    },
+  );
+}
 
   Future<int> updateInvoice(
     InvoiceModel invoice,

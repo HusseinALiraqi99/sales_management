@@ -151,260 +151,300 @@ class _MenusScreenState extends State<MenusScreen> {
             // قائمة الفواتير
             // =========================
             Expanded(
-  child: isLoading
-      ? const Center(
-          child: CircularProgressIndicator(),
-        )
-      : filteredInvoices.isEmpty
-          ? const Center(
-              child: Text(
-                "لا توجد قوائم",
-                style: TextStyle(fontSize: 20),
-              ),
-            )
-          : RefreshIndicator(
-              color: const Color(0xFF011236),
-              backgroundColor: Colors.white,
-              onRefresh: loadInvoices,
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredInvoices.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "لا توجد قوائم",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    )
+                  : RefreshIndicator(
+    color: const Color(0xFF011236),
 
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(15),
+    onRefresh: loadInvoices,
 
-                itemCount: filteredInvoices.length,
+    child: ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
 
-                itemBuilder: (context, index) {
-                  final invoice = filteredInvoices[index];
+      padding: const EdgeInsets.all(15),
 
-                  return Card(
-                  
-                          elevation: 3,
+      itemCount: filteredInvoices.length,
 
-                          margin: const EdgeInsets.only(bottom: 10),
+      itemBuilder: (context, index) {
+        final invoice = filteredInvoices[index];
 
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
+        return Card(
+          elevation: 3,
 
-                          child: ListTile(
-                            // =========================
-                            // أيقونة الفاتورة
-                            // =========================
-                            leading: const CircleAvatar(
-                              backgroundColor: Color(0xFF011236),
+          margin: const EdgeInsets.only(
+            bottom: 10,
+          ),
 
-                              child: Icon(Icons.receipt, color: Colors.white),
-                            ),
+          shape: RoundedRectangleBorder(
+            borderRadius:
+                BorderRadius.circular(15),
+          ),
 
-                            // =========================
-                            // اسم الزبون
-                            // =========================
-                            title: Text(
-                              invoice.customerName,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: invoice.paymentType == "آجل"
-                                    ? Colors.blue
-                                    : Colors.black,
-                              ),
-                            ),
+          child: ListTile(
+            // =========================
+            // أيقونة الفاتورة
+            // =========================
 
-                            // =========================
-                            // التاريخ وطريقة الدفع
-                            // =========================
-                            subtitle: Text(
-                              "${invoice.date}\n"
-                              "طريقة الدفع: "
-                              "${invoice.paymentType}",
-                            ),
+            leading: const CircleAvatar(
+              backgroundColor:
+                  Color(0xFF011236),
 
-                            // =========================
-                            // الإجمالي
-                            // =========================
-                            trailing: Text(
-                              "${invoice.total.toStringAsFixed(0)} د.ع",
-
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-
-                            // =========================
-                            // الضغط على القائمة
-                            // =========================
-                            onTap: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      InvoiceDetailsScreen(invoice: invoice),
-                                ),
-                              );
-
-                              // تحديث البيانات
-                              // بعد الرجوع
-                              await loadInvoices();
-                            },
-
-                            // =========================
-                            // الضغط المطول
-                            // =========================
-                            onLongPress: () {
-                              showModalBottomSheet(
-                                context: context,
-
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(25),
-                                  ),
-                                ),
-
-                                builder: (sheetContext) {
-                                  return SafeArea(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-
-                                      children: [
-                                        const SizedBox(height: 10),
-
-                                        const Text(
-                                          "خيارات القائمة",
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-
-                                        const SizedBox(height: 10),
-
-                                        // =========================
-                                        // تعديل
-                                        // =========================
-                                        ListTile(
-                                          leading: const Icon(
-                                            Icons.edit,
-                                            color: Colors.blue,
-                                          ),
-
-                                          title: const Text("تعديل القائمة"),
-
-                                          onTap: () async {
-                                            Navigator.pop(sheetContext);
-
-                                            final result = await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    EditInvoiceScreen(
-                                                      invoice: invoice,
-                                                    ),
-                                              ),
-                                            );
-
-                                            if (result == true) {
-                                              setState(() {});
-                                            }
-                                          },
-                                        ),
-
-                                        // =========================
-                                        // حذف
-                                        // =========================
-                                        ListTile(
-                                          leading: const Icon(
-                                            Icons.delete,
-                                            color: Colors.red,
-                                          ),
-
-                                          title: const Text("حذف القائمة"),
-
-                                          onTap: () async {
-                                            Navigator.pop(sheetContext);
-
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-
-                                              builder: (dialogContext) {
-                                                return AlertDialog(
-                                                  title: const Text(
-                                                    "حذف القائمة",
-                                                  ),
-
-                                                  content: const Text(
-                                                    "هل أنت متأكد من حذف هذه القائمة؟\n"
-                                                    "سيتم حذف الفاتورة وجميع المنتجات الموجودة فيها.",
-                                                  ),
-
-                                                  actions: [
-                                                    // إلغاء
-                                                    TextButton(
-                                                      onPressed: () {
-                                                        Navigator.pop(
-                                                          dialogContext,
-                                                          false,
-                                                        );
-                                                      },
-
-                                                      child: const Text(
-                                                        "إلغاء",
-                                                      ),
-                                                    ),
-
-                                                    // حذف
-                                                    ElevatedButton(
-                                                      style:
-                                                          ElevatedButton.styleFrom(
-                                                            backgroundColor:
-                                                                Colors.red,
-                                                          ),
-
-                                                      onPressed: () {
-                                                        Navigator.pop(
-                                                          dialogContext,
-                                                          true,
-                                                        );
-                                                      },
-
-                                                      child: const Text(
-                                                        "حذف",
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                );
-                                              },
-                                            );
-
-                                            if (confirm != true) {
-                                              return;
-                                            }
-
-                                            await DatabaseHelper.instance
-                                                .deleteInvoice(invoice.id!);
-
-                                            // تحديث القائمة
-                                            await loadInvoices();
-                                          },
-                                        ),
-
-                                        const SizedBox(height: 10),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        
-                  );
-                },
+              child: Icon(
+                Icons.receipt,
+                color: Colors.white,
               ),
             ),
-),
+
+            // =========================
+            // اسم الزبون
+            // =========================
+
+            title: Text(
+              invoice.customerName,
+
+              style: TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+
+                color:
+                    invoice.paymentType ==
+                            "آجل"
+                        ? Colors.blue
+                        : Colors.black,
+              ),
+            ),
+
+            // =========================
+            // التاريخ
+            // =========================
+
+            subtitle: Text(
+              "${invoice.date}\n"
+              "طريقة الدفع: "
+              "${invoice.paymentType}",
+            ),
+
+            // =========================
+            // المبلغ
+            // =========================
+
+            trailing: Text(
+              "${invoice.total.toStringAsFixed(0)} د.ع",
+
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight:
+                    FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+
+            // =========================
+            // فتح تفاصيل الفاتورة
+            // =========================
+
+            onTap: () async {
+              await Navigator.push(
+                context,
+
+                MaterialPageRoute(
+                  builder: (_) =>
+                      InvoiceDetailsScreen(
+                    invoice: invoice,
+                  ),
+                ),
+              );
+
+              await loadInvoices();
+            },
+
+            // =========================
+            // الضغط المطول
+            // =========================
+
+            onLongPress: () {
+              showModalBottomSheet(
+                context: context,
+
+                shape:
+                    const RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.vertical(
+                    top: Radius.circular(25),
+                  ),
+                ),
+
+                builder: (sheetContext) {
+                  return SafeArea(
+                    child: Column(
+                      mainAxisSize:
+                          MainAxisSize.min,
+
+                      children: [
+                        const SizedBox(
+                          height: 10,
+                        ),
+
+                        const Text(
+                          "خيارات القائمة",
+
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight:
+                                FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(
+                          height: 10,
+                        ),
+
+                        // تعديل
+                        ListTile(
+                          leading: const Icon(
+                            Icons.edit,
+                            color: Colors.blue,
+                          ),
+
+                          title: const Text(
+                            "تعديل القائمة",
+                          ),
+
+                          onTap: () async {
+                            Navigator.pop(
+                              sheetContext,
+                            );
+
+                            final result =
+                                await Navigator.push(
+                              context,
+
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    EditInvoiceScreen(
+                                  invoice: invoice,
+                                ),
+                              ),
+                            );
+
+                            if (result == true) {
+                              await loadInvoices();
+                            }
+                          },
+                        ),
+
+                        // حذف
+                        ListTile(
+                          leading: const Icon(
+                            Icons.delete,
+                            color: Colors.red,
+                          ),
+
+                          title: const Text(
+                            "حذف القائمة",
+                          ),
+
+                          onTap: () async {
+                            Navigator.pop(
+                              sheetContext,
+                            );
+
+                            final confirm =
+                                await showDialog<bool>(
+                              context: context,
+
+                              builder:
+                                  (dialogContext) {
+                                return AlertDialog(
+                                  title:
+                                      const Text(
+                                    "حذف القائمة",
+                                  ),
+
+                                  content:
+                                      const Text(
+                                    "هل أنت متأكد من حذف هذه القائمة؟",
+                                  ),
+
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(
+                                          dialogContext,
+                                          false,
+                                        );
+                                      },
+
+                                      child:
+                                          const Text(
+                                        "إلغاء",
+                                      ),
+                                    ),
+
+                                    ElevatedButton(
+                                      style:
+                                          ElevatedButton
+                                              .styleFrom(
+                                        backgroundColor:
+                                            Colors.red,
+                                      ),
+
+                                      onPressed: () {
+                                        Navigator.pop(
+                                          dialogContext,
+                                          true,
+                                        );
+                                      },
+
+                                      child:
+                                          const Text(
+                                        "حذف",
+
+                                        style:
+                                            TextStyle(
+                                          color:
+                                              Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirm != true) {
+                              return;
+                            }
+
+                            await DatabaseHelper.instance
+    .deleteInvoiceWithSales(invoice.id!);
+
+                            await loadInvoices();
+                          },
+                        ),
+
+                        const SizedBox(
+                          height: 10,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      },
+    ),
+  ),
+            ),
           ],
         ),
       ),
